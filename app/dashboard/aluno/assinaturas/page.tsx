@@ -30,8 +30,7 @@ import { useRouter } from "next/navigation"
 
 export default function AssinaturasPage() {
   const { user } = useAuth()
-  const { aluno, loading: alunoLoading } = useAluno(user?.id)
-  const {createAssinatura} = useAssinaturas(user?.id)
+  const {createAssinatura, assinaturas, loading} = useAssinaturas(user?.id)
   const { planos, loading: planosLoading } = usePlanos()
   const router = useRouter()
 
@@ -43,54 +42,7 @@ export default function AssinaturasPage() {
     dataFim: "",
     valor: "",
   })
-  const [error, setError] = useState("")
-  const [success, setSuccess] = useState("")
-  const [creating, setCreating] = useState(false)
-
-  const assinaturas = aluno?.assinaturas || []
-
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
-
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
-
-  const handleSubmit = async () => {
-    setError("")
-    setSuccess("")
-    setCreating(true)
-
-    // Validação básica
-    if (!formData.planoId || !formData.dataInicio || !formData.dataFim || !formData.valor) {
-      setError("Todos os campos são obrigatórios")
-      setCreating(false)
-      return
-    }
-
-    try {
-      await createAssinatura({
-        planoId: formData.planoId,
-        dataInicio: formData.dataInicio,
-        dataFim: formData.dataFim,
-        valor: Number.parseFloat(formData.valor),
-        alunoId: user?.id ?? "",
-        status: "PENDENTE",
-        parcela: 0,
-        total_parcelas: 1
-      })
-      setDialogOpen(false)
-      setSuccess("Assinatura criada com sucesso!")
-      setFormData({ planoId: "", dataInicio: "", dataFim: "", valor: "" })
-    } catch (err) {
-      setError("Erro ao criar assinatura. Tente novamente.")
-    } finally {
-      setCreating(false)
-    }
-  }
+ 
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -106,12 +58,7 @@ export default function AssinaturasPage() {
             <Clock className="h-3 w-3 mr-1" /> Pendente
           </Badge>
         )
-      case "INATIVA":
-        return (
-          <Badge className="bg-red-100 text-red-800 hover:bg-red-100">
-            <Ban className="h-3 w-3 mr-1" /> Inativa
-          </Badge>
-        )
+  
       case "PENDENTE_APROVACAO":
         return (
           <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
@@ -158,7 +105,13 @@ export default function AssinaturasPage() {
     return true
   })
 
-
+ if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-600"></div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -169,12 +122,7 @@ export default function AssinaturasPage() {
         </div>
         
       </div>
-      {success && (
-        <div className="bg-green-50 border border-green-200 text-green-700 p-4 rounded-md flex items-start">
-          <CheckCircle className="h-5 w-5 text-green-500 mr-3 mt-0.5" />
-          <p>{success}</p>
-        </div>
-      )}
+   
 
       {/* Adicionar card explicativo dos status */}
       <Card className="mb-6">

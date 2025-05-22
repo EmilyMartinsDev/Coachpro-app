@@ -38,6 +38,7 @@ import { useAluno } from "@/hooks/useAluno"
 import { usePlanos } from "@/hooks/usePlanos"
 import { useAssinaturas } from "@/hooks/useAssinaturas"
 import type { Assinatura, Plano } from "@/lib/types"
+import { useAlunoContext } from "@/app/AlunoContext"
 
 export default function AssinaturaDetalhesPage() {
   const params = useParams()
@@ -45,26 +46,19 @@ export default function AssinaturaDetalhesPage() {
   const assinaturaId = params.id as string
 
   const { user } = useAuth()
-  const { aluno, loading: alunoLoading } = useAluno(user?.id)
-  const { planos, loading: planosLoading } = usePlanos()
-  const { updateAssinatura } = useAssinaturas(user?.id)
-
-  const [loading, setLoading] = useState(true)
+  const { updateAssinatura, getAssinaturaById, assinatura , loading} = useAssinaturas(user?.id)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [comprovante, setComprovante] = useState<File | null>(null)
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
 
-  // Busca assinatura do aluno
-  const assinatura = aluno?.assinaturas?.find((a) => a.id === assinaturaId) || null
-  const plano = planos.find((p) => p.id === assinatura?.planoId) || null
 
-  useEffect(() => {
-    if (!alunoLoading && !planosLoading) {
-      setLoading(false)
-    }
-  }, [alunoLoading, planosLoading])
+
+  useEffect(()=>{
+    getAssinaturaById(assinaturaId)
+  },[assinaturaId])
+
 
   // Badge de status
   const getStatusBadge = (status: string) => {
@@ -140,7 +134,7 @@ export default function AssinaturaDetalhesPage() {
       }
       // Monta o FormData para upload real do arquivo
       const formData = new FormData()
-      formData.append("comprovante_pagamento", comprovante)
+      formData.append("comprovante_url", comprovante)
       formData.append("status", "PENDENTE_APROVACAO")
       formData.append("assinaturaId", assinatura.id)
       await updateAssinatura(assinatura.id, formData)
@@ -154,9 +148,8 @@ export default function AssinaturaDetalhesPage() {
     }
   }
 
-  const isLoading = loading || alunoLoading || planosLoading
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-600"></div>
@@ -164,7 +157,7 @@ export default function AssinaturaDetalhesPage() {
     )
   }
 
-  if (!assinatura || !plano) {
+  if (!assinatura ) {
     return (
       <div className="flex flex-col items-center justify-center h-full">
         <p className="text-lg text-gray-500 mb-4">Assinatura não encontrada.</p>
@@ -193,7 +186,7 @@ export default function AssinaturaDetalhesPage() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold">Detalhes da Assinatura</h1>
-            <p className="text-gray-500">{plano.titulo}</p>
+            <p className="text-gray-500">{assinatura?.plano?.titulo}</p>
           </div>
         </div>
         <div>{getStatusBadge(assinatura.status)}</div>
@@ -208,7 +201,7 @@ export default function AssinaturaDetalhesPage() {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-gray-500">Plano:</span>
-              <span className="font-medium">{plano.titulo}</span>
+              <span className="font-medium">{assinatura?.plano?.titulo}</span>
             </div>
 
             <div className="flex items-center justify-between">

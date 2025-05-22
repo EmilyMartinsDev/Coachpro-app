@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { LayoutDashboard, Users, Dumbbell, MessageSquare, CreditCard, Settings, LogOut, Menu, X } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
 import { CoachProvider } from "@/lib/CoachContext"
+import { AlunoProvider } from "../AlunoContext"
 
 export default function DashboardLayout({
   children,
@@ -77,6 +78,7 @@ export default function DashboardLayout({
   // Layout padrão para aluno
   return (
     <div className="flex min-h-screen">
+      <AlunoProvider>
       {/* Sidebar/Aside */}
       <aside className="hidden md:flex md:flex-col md:w-64 bg-white border-r border-gray-200 p-6">
         <div className="mb-8 flex items-center gap-2">
@@ -96,6 +98,7 @@ export default function DashboardLayout({
       </aside>
       {/* Main content */}
       <main className="flex-1 bg-gray-50 min-h-screen">{children}</main>
+      </AlunoProvider>
     </div>
   )
 }

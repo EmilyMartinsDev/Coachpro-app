@@ -232,7 +232,7 @@ export interface PlanoTreino {
   coachId: string
   titulo: string
   descricao?: string
-  arquivo: string
+  arquivo_url: string
   createdAt: string
   updatedAt: string
   aluno?: Aluno
@@ -244,7 +244,7 @@ export interface CreatePlanoTreinoRequest {
   coachId: string
   titulo: string
   descricao?: string
-  arquivo: any
+  arquivo_url: any
 }
 
 // Meal plan types
@@ -254,7 +254,7 @@ export interface PlanoAlimentar {
   coachId: string
   titulo: string
   descricao?: string
-  arquivo?: string
+  arquivo_url?: string
   createdAt: string
   updatedAt: string
   aluno?: Aluno
@@ -266,5 +266,5 @@ export interface CreatePlanoAlimentarRequest {
   coachId: string
   titulo: string
   descricao?: string
-  arquivo?: any
+  arquivo_url?: any
 }

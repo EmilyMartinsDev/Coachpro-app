@@ -223,7 +223,7 @@ export default function AlunoDetailPage() {
                           <h3 className="font-medium">{treino.titulo}</h3>
                           <p className="text-sm text-gray-500">{new Date(treino.createdAt).toLocaleDateString()}</p>
                         </div>
-                        <a  target="_blank" rel="noopener noreferrer">
+                        <a  target="_blank"  href={treino.arquivo_url} rel="noopener noreferrer">
                           <Button variant="outline" size="sm">
                             Visualizar
                           </Button>
@@ -250,8 +250,8 @@ export default function AlunoDetailPage() {
                           <h3 className="font-medium">{plano.titulo}</h3>
                           <p className="text-sm text-gray-500">{new Date(plano.createdAt).toLocaleDateString()}</p>
                         </div>
-                        <a target="_blank" rel="noopener noreferrer">
-                          <Button  onClick={()=>handleDownloadPlanoAlimentar(plano.id)}  variant="outline" size="sm">
+                        <a target="_blank" href={plano.arquivo_url} rel="noopener noreferrer">
+                          <Button variant="outline" size="sm">
                             Visualizar
                           </Button>
                         </a>

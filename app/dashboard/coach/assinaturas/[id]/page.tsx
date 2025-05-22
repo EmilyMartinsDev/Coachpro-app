@@ -29,7 +29,7 @@ export default function AssinaturaDetalhesPage() {
   const assinaturaId = params.id as string
 
   const { coach, loading: coachLoading, error: coachError } = useCoachContext()
-  const { assinaturas, loading: assinaturasLoading } = useAssinaturas()
+  const { assinaturas, loading: assinaturasLoading, updateAssinatura } = useAssinaturas()
 
   // All useState hooks must be called unconditionally at the top level
   const [assinaturaState, setAssinaturaState] = useState<any>(null)
@@ -39,7 +39,7 @@ export default function AssinaturaDetalhesPage() {
   const [processando, setProcessando] = useState(false)
   const [success, setSuccess] = useState("")
   const [errorMsg, setErrorMsg] = useState("")
-  const [pagamentoSelecionado, setPagamentoSelecionado] = useState<string | null>(null)
+
 
   // Use useEffect to set the assinaturaState when data is loaded
   useEffect(() => {
@@ -58,7 +58,7 @@ export default function AssinaturaDetalhesPage() {
     setErrorMsg("")
     setSuccess("")
     try {
-      await AssinaturaService.updateAssinatura(assinaturaState.id, { status: "ATIVA" })
+      await updateAssinatura(assinaturaState.id, {status:"ATIVA"})
       setSuccess("Comprovante aprovado com sucesso!")
       setAprovarDialogOpen(false)
       // Atualize apenas o status localmente
@@ -77,7 +77,7 @@ export default function AssinaturaDetalhesPage() {
     setErrorMsg("")
     setSuccess("")
     try {
-      await AssinaturaService.updateAssinatura(assinaturaState.id, { status: "CANCELADA" })
+      await updateAssinatura(assinaturaState.id, {status:"CANCELADA"})
       setSuccess("Comprovante rejeitado com sucesso!")
       setRejeitarDialogOpen(false)
       setAssinaturaState({ ...assinaturaState, status: "CANCELADA" })

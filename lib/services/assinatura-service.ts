@@ -42,14 +42,13 @@ createAssinatura: async (data: CreateAssinaturaRequest | FormData): Promise<Assi
 },
   updateAssinatura: async (id: string, data: Partial<Assinatura> | FormData): Promise<Assinatura> => {
     if (data instanceof FormData) {
-      // Envia como multipart/form-data para upload de arquivo
       const response = await api.put<{ success: boolean; data: Assinatura }>(`/api/assinaturas/${id}`, data, {
         headers: { "Content-Type": "multipart/form-data" },
       })
       return response.data.data
     } else {
       // Envia como JSON normal
-      const response = await api.put<{ success: boolean; data: Assinatura }>("/api/assinaturas", { id, ...data })
+      const response = await api.put<{ success: boolean; data: Assinatura }>(`/api/assinaturas/${id}`, {...data })
       return response.data.data
     }
   },

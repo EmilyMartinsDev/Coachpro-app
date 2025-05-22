@@ -117,16 +117,13 @@ export default function PlanosPage() {
                               </TableCell>
                               <TableCell className="text-right">
                                 <div className="flex justify-end gap-2">
-                                  <Link href={`/dashboard/aluno/planos/treino/${plano.id}`}>
+                                  <Link href={plano?.arquivo_url || ""}>
                                     <Button size="sm" variant="outline">
                                       <Eye className="h-4 w-4 mr-1" />
                                       Ver
                                     </Button>
                                   </Link>
-                                  <Button size="sm" variant="outline">
-                                    <Download className="h-4 w-4 mr-1" />
-                                    Download
-                                  </Button>
+                                
                                 </div>
                               </TableCell>
                             </TableRow>
@@ -197,16 +194,13 @@ export default function PlanosPage() {
                               </TableCell>
                               <TableCell className="text-right">
                                 <div className="flex justify-end gap-2">
-                                  <Link href={`/dashboard/aluno/planos/alimentar/${plano.id}`}>
+                                  <Link href={plano?.arquivo_url || ""}>
                                     <Button size="sm" variant="outline">
                                       <Eye className="h-4 w-4 mr-1" />
                                       Ver
                                     </Button>
                                   </Link>
-                                  <Button size="sm" variant="outline">
-                                    <Download className="h-4 w-4 mr-1" />
-                                    Download
-                                  </Button>
+                            
                                 </div>
                               </TableCell>
                             </TableRow>

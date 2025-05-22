@@ -6,11 +6,13 @@ import type { Assinatura, CreateAssinaturaRequest } from "@/lib/types"
 
 export function useAssinaturas(alunoId?: string) {
   const [assinaturas, setAssinaturas] = useState<Assinatura[]>([])
+    const [assinatura, setAssinatura] = useState<Assinatura>()
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchAssinaturas = async () => {
+      setLoading(true)
       try {
         let data: Assinatura[]
         if (alunoId) {
@@ -35,6 +37,7 @@ export function useAssinaturas(alunoId?: string) {
     setError(null)
     try {
       const assinatura = await AssinaturaService.getAssinaturaById(id)
+      setAssinatura(assinatura)
       return assinatura
     } catch (err) {
       console.error("Error fetching assinatura:", err)
@@ -68,6 +71,7 @@ export function useAssinaturas(alunoId?: string) {
     try {
       const updatedAssinatura = await AssinaturaService.updateAssinatura(id, data)
       setAssinaturas((prev) => prev.map((assinatura) => (assinatura.id === id ? updatedAssinatura : assinatura)))
+      setAssinatura(updatedAssinatura)
       return updatedAssinatura
     } catch (err) {
       console.error("Error updating assinatura:", err)
@@ -102,6 +106,7 @@ export function useAssinaturas(alunoId?: string) {
     assinaturas,
     loading,
     error,
+    assinatura,
     getAssinaturaById,
     createAssinatura,
     updateAssinatura,
