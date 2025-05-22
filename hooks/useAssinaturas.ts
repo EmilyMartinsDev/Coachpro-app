@@ -45,9 +45,10 @@ export function useAssinaturas(alunoId?: string) {
     }
   }
 
-  const createAssinatura = async (data: CreateAssinaturaRequest) => {
+  const createAssinatura = async (data: CreateAssinaturaRequest | FormData) => {
     setLoading(true)
     setError(null)
+ 
     try {
       const newAssinatura = await AssinaturaService.createAssinatura(data)
       setAssinaturas((prev) => [...prev, newAssinatura])

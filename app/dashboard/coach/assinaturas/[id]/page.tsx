@@ -18,77 +18,53 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import {
-  ArrowLeft,
-  CreditCard,
-  CheckCircle,
-  AlertCircle,
-  Clock,
-  Download,
-  User,
-  ThumbsUp,
-  ThumbsDown,
-  Ban,
-  HourglassIcon,
-} from "lucide-react"
-import { AssinaturaService, PlanoService, AlunoService } from "@/lib/services"
-import type { Assinatura, Plano, Aluno } from "@/lib/types"
+import { ArrowLeft, CheckCircle, AlertCircle, Clock, User, ThumbsUp, ThumbsDown, HourglassIcon } from "lucide-react"
+import { useCoachContext } from "@/lib/CoachContext"
+import { AssinaturaService } from "@/lib/services"
+import { useAssinaturas } from "@/hooks/useAssinaturas"
 
 export default function AssinaturaDetalhesPage() {
   const params = useParams()
   const router = useRouter()
   const assinaturaId = params.id as string
 
-  const [assinatura, setAssinatura] = useState<Assinatura | null>(null)
-  const [plano, setPlano] = useState<Plano | null>(null)
-  const [aluno, setAluno] = useState<Aluno | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { coach, loading: coachLoading, error: coachError } = useCoachContext()
+  const { assinaturas, loading: assinaturasLoading } = useAssinaturas()
+
+  // All useState hooks must be called unconditionally at the top level
+  const [assinaturaState, setAssinaturaState] = useState<any>(null)
   const [activeTab, setActiveTab] = useState("detalhes")
   const [aprovarDialogOpen, setAprovarDialogOpen] = useState(false)
   const [rejeitarDialogOpen, setRejeitarDialogOpen] = useState(false)
   const [processando, setProcessando] = useState(false)
-  const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
+  const [errorMsg, setErrorMsg] = useState("")
   const [pagamentoSelecionado, setPagamentoSelecionado] = useState<string | null>(null)
 
-  // Não existe mais entidade Pagamento, então usamos só assinatura
+  // Use useEffect to set the assinaturaState when data is loaded
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const assinaturaData = await AssinaturaService.getAssinaturaById(assinaturaId)
-        if (assinaturaData) {
-          setAssinatura(assinaturaData)
-
-          const planoData = await PlanoService.getPlanoById(assinaturaData.planoId)
-          setPlano(planoData)
-
-          const alunoData = await AlunoService.getAlunoById(assinaturaData.alunoId)
-          setAluno(alunoData)
-        }
-      } catch (error) {
-        console.error("Erro ao carregar dados:", error)
-      } finally {
-        setLoading(false)
+    if (!assinaturasLoading && assinaturas.length > 0) {
+      const assinatura = assinaturas.find((as: any) => as.id === assinaturaId)
+      if (assinatura) {
+        setAssinaturaState(assinatura)
       }
     }
-
-    fetchData()
-  }, [assinaturaId])
+  }, [assinaturaId, assinaturas, assinaturasLoading])
 
   // Aprovar comprovante: muda status da assinatura para ATIVA
   const handleAprovarComprovante = async () => {
-    if (!assinatura) return
+    if (!assinaturaState) return
     setProcessando(true)
-    setError("")
+    setErrorMsg("")
     setSuccess("")
     try {
-      await AssinaturaService.updateAssinatura(assinatura.id, { status: "ATIVA" })
-      const assinaturaAtualizada = await AssinaturaService.getAssinaturaById(assinatura.id)
-      setAssinatura(assinaturaAtualizada)
+      await AssinaturaService.updateAssinatura(assinaturaState.id, { status: "ATIVA" })
       setSuccess("Comprovante aprovado com sucesso!")
       setAprovarDialogOpen(false)
+      // Atualize apenas o status localmente
+      setAssinaturaState({ ...assinaturaState, status: "ATIVA" })
     } catch (err) {
-      setError("Erro ao aprovar comprovante. Tente novamente.")
+      setErrorMsg("Erro ao aprovar comprovante. Tente novamente.")
     } finally {
       setProcessando(false)
     }
@@ -96,25 +72,21 @@ export default function AssinaturaDetalhesPage() {
 
   // Rejeitar comprovante: muda status da assinatura para INATIVA
   const handleRejeitarComprovante = async () => {
-    if (!assinatura) return
+    if (!assinaturaState) return
     setProcessando(true)
-    setError("")
+    setErrorMsg("")
     setSuccess("")
     try {
-      await AssinaturaService.updateAssinatura(assinatura.id, { status: "CANCELADA" })
-      const assinaturaAtualizada = await AssinaturaService.getAssinaturaById(assinatura.id)
-      setAssinatura(assinaturaAtualizada)
+      await AssinaturaService.updateAssinatura(assinaturaState.id, { status: "CANCELADA" })
       setSuccess("Comprovante rejeitado com sucesso!")
       setRejeitarDialogOpen(false)
+      setAssinaturaState({ ...assinaturaState, status: "CANCELADA" })
     } catch (err) {
-      setError("Erro ao rejeitar comprovante. Tente novamente.")
+      setErrorMsg("Erro ao rejeitar comprovante. Tente novamente.")
     } finally {
       setProcessando(false)
     }
   }
-
-  // Exibir comprovante pendente se status for PENDENTE_APROVACAO
-  const temComprovantePendente = assinatura?.status === "PENDENTE_APROVACAO" && assinatura.comprovante_pagamento
 
   // Atualizar a exibição de status na página de detalhes da assinatura do coach
   const getStatusBadge = (status: string) => {
@@ -129,12 +101,6 @@ export default function AssinaturaDetalhesPage() {
         return (
           <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
             <Clock className="h-3 w-3 mr-1" /> Pendente
-          </Badge>
-        )
-      case "INATIVA":
-        return (
-          <Badge className="bg-red-100 text-red-800 hover:bg-red-100">
-            <Ban className="h-3 w-3 mr-1" /> Inativa
           </Badge>
         )
       case "PENDENTE_APROVACAO":
@@ -162,7 +128,8 @@ export default function AssinaturaDetalhesPage() {
     return Math.ceil(diffTempo / (1000 * 60 * 60 * 24))
   }
 
-  if (loading) {
+  // Loading state
+  if (coachLoading || assinaturasLoading) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-600"></div>
@@ -170,19 +137,45 @@ export default function AssinaturaDetalhesPage() {
     )
   }
 
-  if (!assinatura || !plano || !aluno) {
+  // Error state
+  if (coachError) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p>{coachError || "Erro ao carregar coach."}</p>
+      </div>
+    )
+  }
+
+  // Not found state
+  if (!assinaturaState) {
     return (
       <div className="flex flex-col items-center justify-center h-full">
         <p className="text-lg text-gray-500 mb-4">Assinatura não encontrada.</p>
         <Button onClick={() => router.push("/dashboard/coach/assinaturas")}>
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Voltar para assinaturas
+          Voltar
         </Button>
       </div>
     )
   }
 
-  const diasRestantes = calcularDiasRestantes(assinatura.dataFim)
+  const aluno = coach?.alunos?.find((a: any) => a.id === assinaturaState.alunoId)
+
+  if (!aluno) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full">
+        <p className="text-lg text-gray-500 mb-4">Aluno não encontrado para esta assinatura.</p>
+        <Button onClick={() => router.push("/dashboard/coach/assinaturas")}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Voltar
+        </Button>
+      </div>
+    )
+  }
+
+  // Exibir comprovante pendente se status for PENDENTE_APROVACAO
+  const temComprovantePendente = assinaturaState.status === "PENDENTE_APROVACAO" && assinaturaState.comprovante_url
+  const diasRestantes = calcularDiasRestantes(assinaturaState.dataFim)
 
   return (
     <div className="space-y-6">
@@ -198,13 +191,13 @@ export default function AssinaturaDetalhesPage() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold">Detalhes da Assinatura</h1>
-            <p className="text-gray-500">{plano.titulo}</p>
+            <p className="text-gray-500">{assinaturaState?.plano?.titulo}</p>
           </div>
         </div>
-        <div>{getStatusBadge(assinatura.status)}</div>
+        <div>{getStatusBadge(assinaturaState.status)}</div>
       </div>
 
-      {error && <div className="bg-red-50 text-red-600 p-4 rounded-md">{error}</div>}
+      {errorMsg && <div className="bg-red-50 text-red-600 p-4 rounded-md">{errorMsg}</div>}
       {success && <div className="bg-green-50 text-green-600 p-4 rounded-md">{success}</div>}
 
       {temComprovantePendente && (
@@ -212,9 +205,7 @@ export default function AssinaturaDetalhesPage() {
           <AlertCircle className="h-5 w-5 text-yellow-500 mr-3 mt-0.5" />
           <div>
             <h3 className="font-medium text-yellow-800">Comprovante pendente de aprovação</h3>
-            <p className="text-yellow-700 text-sm mt-1">
-              Existe um comprovante que precisa da sua aprovação.
-            </p>
+            <p className="text-yellow-700 text-sm mt-1">Existe um comprovante que precisa da sua aprovação.</p>
           </div>
         </div>
       )}
@@ -223,7 +214,7 @@ export default function AssinaturaDetalhesPage() {
         <TabsList className="grid grid-cols-2 mb-4">
           <TabsTrigger value="detalhes">Detalhes</TabsTrigger>
           {/* Só mostra a aba de pagamentos se houver comprovante */}
-          {assinatura.comprovante_pagamento && <TabsTrigger value="pagamentos">Comprovante</TabsTrigger>}
+          {assinaturaState.comprovante_url && <TabsTrigger value="pagamentos">Comprovante</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="detalhes">
@@ -247,39 +238,41 @@ export default function AssinaturaDetalhesPage() {
 
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500">Plano:</span>
-                  <span className="font-medium">{plano.titulo}</span>
+                  <span className="font-medium">{assinaturaState?.plano?.titulo}</span>
                 </div>
 
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500">Status:</span>
-                  {getStatusBadge(assinatura.status)}
+                  {getStatusBadge(assinaturaState.status)}
                 </div>
 
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500">Valor</span>
-                  <span className="font-medium">R$ {assinatura.valor.toFixed(2)}</span>
+                  <span className="font-medium">R$ {assinaturaState.valor.toFixed(2)}</span>
                 </div>
 
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500">Parcela:</span>
                   <span className="font-medium">
-                    {assinatura.parcela}/{assinatura.totalParcelas} 
+                    {assinaturaState.parcela}/{assinaturaState.totalParcelas}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500">Data de Início:</span>
-                  <span className="font-medium">{new Date(assinatura.dataInicio).toLocaleDateString("pt-BR")}</span>
+                  <span className="font-medium">
+                    {new Date(assinaturaState.dataInicio).toLocaleDateString("pt-BR")}
+                  </span>
                 </div>
 
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500">Data de Término:</span>
-                  <span className="font-medium">{new Date(assinatura.dataFim).toLocaleDateString("pt-BR")}</span>
+                  <span className="font-medium">{new Date(assinaturaState.dataFim).toLocaleDateString("pt-BR")}</span>
                 </div>
 
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500">Criada em:</span>
-                  <span className="font-medium">{new Date(assinatura.createdAt).toLocaleDateString("pt-BR")}</span>
+                  <span className="font-medium">{new Date(assinaturaState.createdAt).toLocaleDateString("pt-BR")}</span>
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -301,7 +294,7 @@ export default function AssinaturaDetalhesPage() {
                   <div className="space-y-4">
                     <div className="aspect-video relative rounded-md overflow-hidden mb-4 bg-gray-100">
                       <Image
-                        src={assinatura.comprovante_pagamento || "/placeholder.svg"}
+                        src={assinaturaState.comprovante_url || "/placeholder.svg"}
                         alt="Comprovante de pagamento"
                         fill
                         className="object-contain"
@@ -313,7 +306,7 @@ export default function AssinaturaDetalhesPage() {
                         size="sm"
                         className="flex-1"
                         onClick={() => setRejeitarDialogOpen(true)}
-                        disabled={assinatura.status !== "PENDENTE_APROVACAO"}
+                        disabled={assinaturaState.status !== "PENDENTE_APROVACAO"}
                       >
                         <ThumbsDown className="h-4 w-4 mr-2" />
                         Rejeitar
@@ -322,7 +315,7 @@ export default function AssinaturaDetalhesPage() {
                         size="sm"
                         className="flex-1"
                         onClick={() => setAprovarDialogOpen(true)}
-                        disabled={assinatura.status !== "PENDENTE_APROVACAO"}
+                        disabled={assinaturaState.status !== "PENDENTE_APROVACAO"}
                       >
                         <ThumbsUp className="h-4 w-4 mr-2" />
                         Aprovar
@@ -342,11 +335,11 @@ export default function AssinaturaDetalhesPage() {
               <CardDescription>Visualize e aprove ou rejeite o comprovante enviado pelo aluno</CardDescription>
             </CardHeader>
             <CardContent>
-              {assinatura.comprovante_pagamento ? (
+              {assinaturaState.comprovante_url ? (
                 <div className="space-y-4">
                   <div className="aspect-video relative rounded-md overflow-hidden mb-4 bg-gray-100">
                     <Image
-                      src={assinatura.comprovante_pagamento || "/placeholder.svg"}
+                      src={assinaturaState.comprovante_url || "/placeholder.svg"}
                       alt="Comprovante de pagamento"
                       fill
                       className="object-contain"
@@ -358,7 +351,7 @@ export default function AssinaturaDetalhesPage() {
                       size="sm"
                       className="flex-1"
                       onClick={() => setRejeitarDialogOpen(true)}
-                      disabled={assinatura.status !== "PENDENTE_APROVACAO"}
+                      disabled={assinaturaState.status !== "PENDENTE_APROVACAO"}
                     >
                       <ThumbsDown className="h-4 w-4 mr-2" />
                       Rejeitar
@@ -367,7 +360,7 @@ export default function AssinaturaDetalhesPage() {
                       size="sm"
                       className="flex-1"
                       onClick={() => setAprovarDialogOpen(true)}
-                      disabled={assinatura.status !== "PENDENTE_APROVACAO"}
+                      disabled={assinaturaState.status !== "PENDENTE_APROVACAO"}
                     >
                       <ThumbsUp className="h-4 w-4 mr-2" />
                       Aprovar

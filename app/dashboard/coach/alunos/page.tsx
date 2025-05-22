@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useAuth } from "@/hooks/useAuth"
-import { useAlunos } from "@/hooks/useAlunos"
+import CoachService from "@/lib/services/coach-service"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -17,13 +17,26 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Coach } from "@/lib/types"
 
 export default function AlunosPage() {
   const { user } = useAuth()
-  const { alunos, loading, error } = useAlunos(user?.id)
+  const [coach, setCoach] = useState<Coach | null>(null)
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
+
+  useEffect(() => {
+    if (user?.id) {
+      CoachService.getCoachById(user.id).then((data) => {
+        setCoach(data)
+        setLoading(false)
+      })
+    }
+  }, [user?.id])
+
+  const alunos = coach?.alunos || []
 
   // Filter alunos based on search term
   const filteredAlunos = alunos.filter(
@@ -67,10 +80,6 @@ export default function AlunosPage() {
               {Array.from({ length: 5 }).map((_, i) => (
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
-            </div>
-          ) : error ? (
-            <div className="rounded-md bg-red-50 p-4 text-red-700">
-              <p>{error}</p>
             </div>
           ) : (
             <>
@@ -117,21 +126,44 @@ export default function AlunosPage() {
                     <PaginationContent>
                       <PaginationItem>
                         <PaginationPrevious
-                          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                          disabled={currentPage === 1}
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            if (currentPage > 1) {
+                              setCurrentPage((prev) => Math.max(prev - 1, 1))
+                            }
+                          }}
+                          aria-disabled={currentPage === 1}
+                          tabIndex={currentPage === 1 ? -1 : 0}
+                          className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
                         />
                       </PaginationItem>
                       {Array.from({ length: totalPages }).map((_, i) => (
                         <PaginationItem key={i}>
-                          <PaginationLink onClick={() => setCurrentPage(i + 1)} isActive={currentPage === i + 1}>
+                          <PaginationLink
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              setCurrentPage(i + 1)
+                            }}
+                            isActive={currentPage === i + 1}
+                          >
                             {i + 1}
                           </PaginationLink>
                         </PaginationItem>
                       ))}
                       <PaginationItem>
                         <PaginationNext
-                          onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                          disabled={currentPage === totalPages}
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            if (currentPage < totalPages) {
+                              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                            }
+                          }}
+                          aria-disabled={currentPage === totalPages}
+                          tabIndex={currentPage === totalPages ? -1 : 0}
+                          className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
                         />
                       </PaginationItem>
                     </PaginationContent>

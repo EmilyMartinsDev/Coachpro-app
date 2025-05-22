@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useAuth } from "@/hooks/useAuth"
-import { useAlunos } from "@/hooks/useAlunos"
+import CoachService from "@/lib/services/coach-service"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -20,55 +20,32 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { format } from "date-fns"
 import { FeedbackService } from "@/lib/services"
+import type { Coach } from "@/lib/types"
 
 export default function FeedbacksPage() {
   const { user } = useAuth()
-  const { alunos, loading: loadingAlunos } = useAlunos(user?.id)
-  const [allFeedbacks, setAllFeedbacks] = useState<any[]>([])
+  const [coach, setCoach] = useState<Coach | null>(null)
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
-  const [loading, setLoading] = useState(true)
 
-  // Busca todos os feedbacks dos alunos do coach
   useEffect(() => {
-    const fetchAllFeedbacks = async () => {
-      setLoading(true)
-      try {
-        if (!loadingAlunos && alunos.length > 0) {
-          // Busca feedbacks de todos os alunos em paralelo
-          const allFeedbacksPromises = alunos.map(async (aluno) => {
-            const feedbacks = await FeedbackService.getFeedbacksByAlunoId(aluno.id)
-            return feedbacks.map((feedback) => ({
-              ...feedback,
-              alunoNome: aluno.nome,
-            }))
-          })
-          const feedbacksArrays = await Promise.all(allFeedbacksPromises)
-          const combinedFeedbacks = feedbacksArrays.flat()
-          setAllFeedbacks(combinedFeedbacks)
-        } else {
-          setAllFeedbacks([])
-        }
-      } catch (error) {
-        console.error("Error fetching all feedbacks:", error)
-      } finally {
+    if (user?.id) {
+      CoachService.getCoachById(user.id).then((data) => {
+        setCoach(data)
         setLoading(false)
-      }
+      })
     }
-    if (!loadingAlunos) {
-      fetchAllFeedbacks()
-    }
-  }, [loadingAlunos, alunos])
+  }, [user?.id])
 
-  // Filter feedbacks based on search term
-  const filteredFeedbacks = allFeedbacks.filter(
-    (feedback) =>
+  // Junta todos os feedbacks dos alunos
+  const feedbacks = coach?.alunos?.flatMap((a: any) => (a.feedbacks || []).map((fb: any) => ({ ...fb, alunoNome: a.nome }))) || []
+  const filteredFeedbacks = feedbacks.filter(
+    (feedback: any) =>
       feedback.alunoNome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       new Date(feedback.diaFeedback).toLocaleDateString().includes(searchTerm),
   )
-
-  // Pagination
   const totalPages = Math.ceil(filteredFeedbacks.length / itemsPerPage)
   const paginatedFeedbacks = filteredFeedbacks.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
@@ -124,7 +101,7 @@ export default function FeedbacksPage() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      paginatedFeedbacks.map((feedback) => (
+                      paginatedFeedbacks.map((feedback: any) => (
                         <TableRow key={feedback.id}>
                           <TableCell>{feedback.alunoNome}</TableCell>
                           <TableCell>{format(new Date(feedback.diaFeedback), "dd/MM/yyyy")}</TableCell>

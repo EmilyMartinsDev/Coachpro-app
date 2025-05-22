@@ -3,24 +3,27 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAuth } from "@/hooks/useAuth"
-import { useAlunos } from "@/hooks/useAlunos"
-import { useFeedbacks } from "@/hooks/useFeedbacks"
-import { useTreinos } from "@/hooks/useTreinos"
-import { usePlanosAlimentares } from "@/hooks/usePlanosAlimentares"
+import { useEffect, useState } from "react"
+import CoachService from "@/lib/services/coach-service"
 import Link from "next/link"
 import { ArrowRight, Dumbbell, MessageSquare, UserPlus, Users, Utensils } from "lucide-react"
 import { Coach, Aluno, Feedback } from "@/lib/types"
 
 export default function CoachDashboard() {
   const { user, isLoading: authLoading } = useAuth()
-  const { alunos, loading: alunosLoading } = useAlunos(user?.id)
-  const { feedbacks, loading: feedbacksLoading } = useFeedbacks()
-  const { treinos, loading: treinosLoading } = useTreinos()
-  const { planosAlimentares, loading: alimentaresLoading } = usePlanosAlimentares()
+  const [coach, setCoach] = useState<Coach | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  const isLoading = authLoading || alunosLoading || feedbacksLoading || treinosLoading || alimentaresLoading
+  useEffect(() => {
+    if (user?.id) {
+      CoachService.getCoachById(user.id).then((data) => {
+        setCoach(data)
+        setLoading(false)
+      })
+    }
+  }, [user?.id])
 
-  if (isLoading) {
+  if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-600"></div>
@@ -28,7 +31,7 @@ export default function CoachDashboard() {
     )
   }
 
-  if (!user) {
+  if (!user || !coach) {
     return (
       <div className="flex items-center justify-center h-full">
         <p>Erro ao carregar dados do coach.</p>
@@ -36,10 +39,14 @@ export default function CoachDashboard() {
     )
   }
 
-  // Ordenar feedbacks por data (mais recente primeiro)
+  // Dados aninhados
+  const alunos = coach.alunos || []
+  const feedbacks = alunos.flatMap((a) => a.feedbacks || [])
+  const treinos = alunos.flatMap((a) => a.planosTreino || [])
+  const planosAlimentares = alunos.flatMap((a) => a.planosAlimentar || [])
   const sortedFeedbacks = [...feedbacks].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-  )
+  ).filter((feedbacks)=> feedbacks.respondido === false)
 
   return (
     <div className="space-y-6">
@@ -97,11 +104,11 @@ export default function CoachDashboard() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Feedbacks Recentes</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-500">Feedbacks Pendentes</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold">{feedbacks.length}</div>
+              <div className="text-2xl font-bold">{feedbacks.filter(fed=>!fed.respondido).length}</div>
               <MessageSquare className="h-8 w-8 text-emerald-600" />
             </div>
           </CardContent>
@@ -152,8 +159,8 @@ export default function CoachDashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Feedbacks Recentes</CardTitle>
-            <CardDescription>Feedbacks recentes dos seus alunos</CardDescription>
+            <CardTitle>Feedbacks Pendentes</CardTitle>
+            <CardDescription>Feedbacks pendentes de resposta</CardDescription>
           </CardHeader>
           <CardContent>
             {sortedFeedbacks.length > 0 ? (

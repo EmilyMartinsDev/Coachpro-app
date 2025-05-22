@@ -79,6 +79,23 @@ const createFeedback = async (data: CreateFeedbackRequest, photos: File[] = []) 
     setLoading(false)
   }
 }
+  const updateRespostaFeedback = async (id: string, data: Partial<Feedback>) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const updatedFeedback = await FeedbackService.updateFeedback(id, data)
+      setFeedbacks((prev) => {
+        const arr = Array.isArray(prev) ? prev : []
+        return arr.map((feedback) => (feedback.id === id ? { ...feedback, ...updatedFeedback } : feedback))
+      })
+      return updatedFeedback
+    } catch (err: any) {
+      setError(err?.message || "Erro ao atualizar feedback")
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return {
     feedbacks,
@@ -87,5 +104,6 @@ const createFeedback = async (data: CreateFeedbackRequest, photos: File[] = []) 
     getFeedbackById,
     getFeedbackPhotos,
     createFeedback,
+    updateRespostaFeedback,
   }
 }

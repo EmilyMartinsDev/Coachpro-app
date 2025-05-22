@@ -4,7 +4,7 @@ import type { Plano, CreatePlanoRequest } from "../types"
 // Ajuste: backend retorna { success: boolean, data: ... }
 const PlanoService = {
   getPlanos: async (): Promise<Plano[]> => {
-    const response = await api.get<{ success: boolean; data: Plano[] }>("/api/planos")
+    const response = await api.get<{ success: boolean; data: Plano[] }>("/api/planos/")
     return response.data.data
   },
 

@@ -9,14 +9,29 @@ export function useTreinos(alunoId?: string) {
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
 
+  useEffect(() => {
+    const fetchPlanos = async () => {
+  
+      setLoading(true)
+      setError(null)
+      try {
+        const data = await TreinoService.getTreinos()
+        setTreinos(data)
+      } catch (err) {
+        console.error("Error fetching planos alimentares:", err)
+        setError("Erro ao carregar planos alimentares")
+      } finally {
+        setLoading(false)
+      }
+    }
 
-
-
-  const createPlanoTreino = async (data: CreatePlanoTreinoRequest) => {
+    fetchPlanos()
+  }, [alunoId])
+  const createPlanoTreino = async (data: Omit<CreatePlanoTreinoRequest, 'arquivo'> & { arquivo: File }) => {
     setLoading(true)
     setError(null)
     try {
-      const newTreino = await TreinoService.createPlanoTreino(data)
+      const newTreino = await TreinoService.createPlanoTreino({ ...data, arquivo: data.arquivo })
       setTreinos((prev) => [...prev, newTreino])
       return newTreino
     } catch (err) {

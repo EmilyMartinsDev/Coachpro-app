@@ -48,7 +48,7 @@ export default function AssinaturasPage() {
   const [creating, setCreating] = useState(false)
 
   const assinaturas = aluno?.assinaturas || []
-  const loading = alunoLoading || planosLoading
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -158,13 +158,7 @@ export default function AssinaturasPage() {
     return true
   })
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-600"></div>
-      </div>
-    )
-  }
+
 
   return (
     <div className="space-y-6">

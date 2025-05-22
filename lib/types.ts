@@ -9,6 +9,15 @@ export interface User {
 export interface Coach extends User {
   telefone: string
   dataNascimento: string
+  foto?: string | null
+  createdAt?: string
+  alunos?: Aluno[] // Novo: coach traz alunos aninhados
+  planos?:Plano[]
+}
+
+export interface CoachDetailResponse {
+  success: boolean
+  data: Coach
 }
 
 export interface Aluno {
@@ -17,14 +26,15 @@ export interface Aluno {
   email: string
   telefone: string
   dataNascimento: string
-  coachId: string
+  createdAt?: string
+  coachId?: string
   coach?: CoachSummary
+  anamnese?: Anamnese | null
   feedbacks?: Feedback[]
-  assinaturas?: Assinatura[]
   planosAlimentar?: PlanoAlimentar[]
   planosTreino?: PlanoTreino[]
-  anamnese?: Anamnese | null
-  createdAt?: string
+  assinaturas?: Assinatura[]
+  diaFeedback?: string
 }
 
 export interface CoachSummary {
@@ -77,7 +87,7 @@ export interface Assinatura {
   status: "PENDENTE_APROVACAO" | "PENDENTE" | "ATIVA" | "INATIVA" | "CANCELADA"
   parcela: number
   totalParcelas: number
-  comprovante_pagamento?: string
+  comprovante_url?: string
   createdAt: string
   updatedAt: string
   aluno?: Aluno
@@ -90,10 +100,10 @@ export interface CreateAssinaturaRequest {
   dataInicio: string
   dataFim: string
   valor: number
-  status: "PENDENTE_APROVACAO" | "PENDENTE" | "ATIVA" | "INATIVA" | "CANCELADA"
+  status: "PENDENTE_APROVACAO" | "PENDENTE" | "ATIVA"  | "CANCELADA"
   parcela: number
   total_parcelas: number
-  comprovante_pagamento?: string
+  comprovante_url?: string
 }
 
 
@@ -128,6 +138,7 @@ export interface Feedback {
   createdAt: string
   updatedAt: string
   aluno?: Aluno
+  resposta?: string
   respondido?: boolean
   fotos?: FotoFeedback[]
 }
@@ -221,7 +232,7 @@ export interface PlanoTreino {
   coachId: string
   titulo: string
   descricao?: string
-  caminhoArquivo: string
+  arquivo: string
   createdAt: string
   updatedAt: string
   aluno?: Aluno
@@ -233,7 +244,7 @@ export interface CreatePlanoTreinoRequest {
   coachId: string
   titulo: string
   descricao?: string
-  caminhoArquivo: string
+  arquivo: any
 }
 
 // Meal plan types
@@ -243,7 +254,7 @@ export interface PlanoAlimentar {
   coachId: string
   titulo: string
   descricao?: string
-  caminhoArquivo: string
+  arquivo?: string
   createdAt: string
   updatedAt: string
   aluno?: Aluno
@@ -255,5 +266,5 @@ export interface CreatePlanoAlimentarRequest {
   coachId: string
   titulo: string
   descricao?: string
-  caminhoArquivo: string
+  arquivo?: any
 }

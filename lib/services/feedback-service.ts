@@ -46,6 +46,11 @@ uploadFeedbackPhoto: async (feedbackId: string, file: File): Promise<FotoFeedbac
     const response = await api.get<FotoFeedback[]>(`/api/feedbacks/${feedbackId}/photos`)
     return response.data
   },
+
+  updateFeedback: async (id: string, data: Partial<Feedback>): Promise<Feedback> => {
+    const response = await api.put<{ success: boolean; data: Feedback }>(`/api/feedbacks/${id}/responder`, data)
+    return response.data.data
+  }
 }
 
 export default FeedbackService

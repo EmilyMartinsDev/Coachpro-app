@@ -11,12 +11,14 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
+import { usePlanosAlimentares } from "@/hooks/usePlanosAlimentares"
 
 export default function AlunoDetailPage() {
   const params = useParams()
   const alunoId = params.id as string
   const { aluno, loading, error } = useAluno(alunoId)
   const [activeTab, setActiveTab] = useState("perfil")
+  const {downloadPlanoAlimentar} = usePlanosAlimentares()
 
   if (loading || !aluno) {
     return (
@@ -34,6 +36,14 @@ export default function AlunoDetailPage() {
         <p className="text-red-500">{error}</p>
       </div>
     )
+  }
+
+  const handleDownloadPlanoAlimentar = async (planoId: string) => {
+    try {
+        await downloadPlanoAlimentar(planoId)
+    } catch (error) {
+      console.error("Erro ao baixar o plano alimentar:", error)
+    }
   }
 
   return (
@@ -133,9 +143,9 @@ export default function AlunoDetailPage() {
                             <span>{new Date(assinatura.dataFim).toLocaleDateString()}</span>
                           </div>
                         </div>
-                        {assinatura.comprovante_pagamento && (
+                        {assinatura.comprovante_url && (
                           <div className="mt-2">
-                            <a href={assinatura.comprovante_pagamento} target="_blank" rel="noopener noreferrer">
+                            <a href={assinatura.comprovante_url} target="_blank" rel="noopener noreferrer">
                               <Button variant="outline" size="sm">
                                 Ver comprovante
                               </Button>
@@ -213,7 +223,7 @@ export default function AlunoDetailPage() {
                           <h3 className="font-medium">{treino.titulo}</h3>
                           <p className="text-sm text-gray-500">{new Date(treino.createdAt).toLocaleDateString()}</p>
                         </div>
-                        <a href={treino.caminhoArquivo} target="_blank" rel="noopener noreferrer">
+                        <a  target="_blank" rel="noopener noreferrer">
                           <Button variant="outline" size="sm">
                             Visualizar
                           </Button>
@@ -240,8 +250,8 @@ export default function AlunoDetailPage() {
                           <h3 className="font-medium">{plano.titulo}</h3>
                           <p className="text-sm text-gray-500">{new Date(plano.createdAt).toLocaleDateString()}</p>
                         </div>
-                        <a href={plano.caminhoArquivo} target="_blank" rel="noopener noreferrer">
-                          <Button variant="outline" size="sm">
+                        <a target="_blank" rel="noopener noreferrer">
+                          <Button  onClick={()=>handleDownloadPlanoAlimentar(plano.id)}  variant="outline" size="sm">
                             Visualizar
                           </Button>
                         </a>

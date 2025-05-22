@@ -8,6 +8,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { LayoutDashboard, Users, Dumbbell, MessageSquare, CreditCard, Settings, LogOut, Menu, X } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
+import { CoachProvider } from "@/lib/CoachContext"
 
 export default function DashboardLayout({
   children,
@@ -44,105 +45,57 @@ export default function DashboardLayout({
     return <div className="flex items-center justify-center h-screen">Carregando...</div>
   }
 
-  return (
-    <div className="flex h-screen bg-gray-100">
-      {/* Sidebar para desktop */}
-      <aside className="hidden md:flex flex-col w-64 bg-white border-r">
-        <div className="p-4 border-b">
-          <Link href="/" className="flex items-center">
-            <h1 className="text-xl font-bold text-emerald-600">CoachPro</h1>
-          </Link>
+  // Envolver children com CoachProvider apenas se for coach
+  if (user?.tipo === "coach") {
+    return (
+      <CoachProvider>
+        <div className="flex min-h-screen">
+          {/* Sidebar/Aside */}
+          <aside className="hidden md:flex md:flex-col md:w-64 bg-white border-r border-gray-200 p-6">
+            <div className="mb-8 flex items-center gap-2">
+              <span className="font-bold text-lg text-emerald-700">CoachPro</span>
+            </div>
+            <nav className="flex-1 space-y-2">
+              {navLinks.map((link) => (
+                <Link key={link.href} href={link.href} className={`flex items-center gap-2 px-3 py-2 rounded-md hover:bg-emerald-50 transition ${pathname === link.href ? 'bg-emerald-100 text-emerald-700 font-semibold' : 'text-gray-700'}`}>
+                  {link.icon}
+                  <span>{link.label}</span>
+                </Link>
+              ))}
+            </nav>
+            <Button variant="ghost" className="mt-8 w-full flex items-center gap-2" onClick={handleLogout}>
+              <LogOut className="h-5 w-5" /> Sair
+            </Button>
+          </aside>
+          {/* Main content */}
+          <main className="flex-1 bg-gray-50 min-h-screen">{children}</main>
         </div>
+      </CoachProvider>
+    )
+  }
 
-        <nav className="flex-1 p-4 space-y-1">
+  // Layout padrão para aluno
+  return (
+    <div className="flex min-h-screen">
+      {/* Sidebar/Aside */}
+      <aside className="hidden md:flex md:flex-col md:w-64 bg-white border-r border-gray-200 p-6">
+        <div className="mb-8 flex items-center gap-2">
+          <span className="font-bold text-lg text-emerald-700">CoachPro</span>
+        </div>
+        <nav className="flex-1 space-y-2">
           {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`flex items-center px-4 py-3 rounded-md transition-colors ${
-                pathname === link.href ? "bg-emerald-50 text-emerald-600" : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
+            <Link key={link.href} href={link.href} className={`flex items-center gap-2 px-3 py-2 rounded-md hover:bg-emerald-50 transition ${pathname === link.href ? 'bg-emerald-100 text-emerald-700 font-semibold' : 'text-gray-700'}`}>
               {link.icon}
-              <span className="ml-3">{link.label}</span>
+              <span>{link.label}</span>
             </Link>
           ))}
         </nav>
-
-        <div className="p-4 border-t space-y-1">
-          <Link
-            href={`/dashboard/${user.tipo}/configuracoes`}
-            className="flex items-center px-4 py-3 rounded-md text-gray-600 hover:bg-gray-100 transition-colors"
-          >
-            <Settings className="h-5 w-5" />
-            <span className="ml-3">Configurações</span>
-          </Link>
-          <Button
-            variant="ghost"
-            className="flex items-center w-full px-4 py-3 rounded-md text-gray-600 hover:bg-gray-100 transition-colors justify-start"
-            onClick={handleLogout}
-          >
-            <LogOut className="h-5 w-5" />
-            <span className="ml-3">Sair</span>
-          </Button>
-        </div>
+        <Button variant="ghost" className="mt-8 w-full flex items-center gap-2" onClick={handleLogout}>
+          <LogOut className="h-5 w-5" /> Sair
+        </Button>
       </aside>
-
-      {/* Conteúdo principal */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header para mobile */}
-        <header className="bg-white border-b md:hidden">
-          <div className="flex items-center justify-between p-4">
-            <Link href="/" className="flex items-center">
-              <h1 className="text-xl font-bold text-emerald-600">CoachPro</h1>
-            </Link>
-            <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </Button>
-          </div>
-
-          {/* Menu mobile */}
-          {mobileMenuOpen && (
-            <nav className="p-4 space-y-1 border-t">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`flex items-center px-4 py-3 rounded-md transition-colors ${
-                    pathname === link.href ? "bg-emerald-50 text-emerald-600" : "text-gray-600 hover:bg-gray-100"
-                  }`}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {link.icon}
-                  <span className="ml-3">{link.label}</span>
-                </Link>
-              ))}
-              <Link
-                href={`/dashboard/${user.tipo}/configuracoes`}
-                className="flex items-center px-4 py-3 rounded-md text-gray-600 hover:bg-gray-100 transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <Settings className="h-5 w-5" />
-                <span className="ml-3">Configurações</span>
-              </Link>
-              <Button
-                variant="ghost"
-                className="flex items-center w-full px-4 py-3 rounded-md text-gray-600 hover:bg-gray-100 transition-colors justify-start"
-                onClick={() => {
-                  handleLogout()
-                  setMobileMenuOpen(false)
-                }}
-              >
-                <LogOut className="h-5 w-5" />
-                <span className="ml-3">Sair</span>
-              </Button>
-            </nav>
-          )}
-        </header>
-
-        {/* Conteúdo da página */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
-      </div>
+      {/* Main content */}
+      <main className="flex-1 bg-gray-50 min-h-screen">{children}</main>
     </div>
   )
 }

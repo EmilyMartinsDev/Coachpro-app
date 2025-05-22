@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/useAuth"
 import { useFeedbacks } from "@/hooks/useFeedbacks"
+import { useAluno } from "@/hooks/useAluno"
 import { format } from "date-fns"
 import {
   Card,
@@ -25,7 +26,8 @@ export default function EnviarFeedbackPage() {
   const router = useRouter()
   const { user } = useAuth()
   const { createFeedback } = useFeedbacks()
-  
+  const { aluno, loading: alunoLoading } = useAluno(user?.id)
+
   // Form state
   const [formData, setFormData] = useState({
     peso: "",
@@ -136,6 +138,39 @@ export default function EnviarFeedbackPage() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  // Verifica se é o dia do feedback (por dia da semana)
+  const diasSemana = [
+    "domingo",
+    "segunda",
+    "terça",
+    "quarta",
+    "quinta",
+    "sexta",
+    "sábado"
+  ]
+  const hojeIdx = new Date().getDay()
+  const hojeNome = diasSemana[hojeIdx]
+
+
+  const isDiaFeedback = hojeNome === aluno?.diaFeedback
+
+  if (alunoLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-600"></div>
+      </div>
+    )
+  }
+
+  if (!isDiaFeedback) {
+    return (
+      <div className="container mx-auto py-12 max-w-xl text-center">
+        <h1 className="text-2xl font-bold mb-4">Envio de Feedback Indisponível</h1>
+        <p className="text-gray-600 mb-2">Você só pode enviar feedback na {aluno?.diaFeedback} feira</p>
+      </div>
+    )
   }
 
   return (

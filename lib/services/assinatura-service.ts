@@ -28,11 +28,18 @@ const AssinaturaService = {
     return response.data.data
   },
 
-  createAssinatura: async (data: CreateAssinaturaRequest): Promise<Assinatura> => {
-    const response = await api.post<{ success: boolean; data: Assinatura }>("/api/assinaturas/", data)
-    return response.data.data
-  },
-
+createAssinatura: async (data: CreateAssinaturaRequest | FormData): Promise<Assinatura> => {
+  if (data instanceof FormData) {
+    const response = await api.post<{ success: boolean; data: Assinatura }>('/api/assinaturas', data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data.data;
+  } else {
+    // Caso não seja FormData, envie como JSON normal
+    const response = await api.post<{ success: boolean; data: Assinatura }>('/api/assinaturas', data);
+    return response.data.data;
+  }
+},
   updateAssinatura: async (id: string, data: Partial<Assinatura> | FormData): Promise<Assinatura> => {
     if (data instanceof FormData) {
       // Envia como multipart/form-data para upload de arquivo
