@@ -27,7 +27,7 @@ export function useTreinos(alunoId?: string) {
 
     fetchPlanos()
   }, [alunoId])
-  const createPlanoTreino = async (data: Omit<CreatePlanoTreinoRequest, 'arquivo'> & { arquivo: File }) => {
+  const createPlanoTreino = async (data: CreatePlanoTreinoRequest & { arquivo: File }) => {
     setLoading(true)
     setError(null)
     try {

@@ -29,7 +29,7 @@ export default function FeedbacksPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
-
+  
   useEffect(() => {
     if (user?.id) {
       CoachService.getCoachById(user.id).then((data) => {
@@ -90,6 +90,7 @@ export default function FeedbacksPage() {
                       <TableHead>Aluno</TableHead>
                       <TableHead>Data</TableHead>
                       <TableHead>Seguiu Plano</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead>Ações</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -116,6 +117,17 @@ export default function FeedbacksPage() {
                               }
                             >
                               {feedback.seguiuPlano}
+                            </Badge>
+                          </TableCell>
+                            <TableCell>
+                            <Badge
+                              className={
+                                feedback.respondido 
+                                  ? "bg-green-100 text-green-800"
+                                    : "bg-red-100 text-red-800"
+                              }
+                            >
+                              {feedback.respondido  ? "Respondido": "Não respondido"}
                             </Badge>
                           </TableCell>
                           <TableCell>

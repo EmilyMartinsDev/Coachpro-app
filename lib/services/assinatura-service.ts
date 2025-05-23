@@ -18,15 +18,6 @@ const AssinaturaService = {
     return response.data.data
   },
 
-  getAssinaturasPendentes: async (): Promise<Assinatura[]> => {
-    const response = await api.get<{ success: boolean; data: Assinatura[] }>("/api/assinaturas/pendentes")
-    return response.data.data
-  },
-
-  getAssinaturasAguardandoAprovacao: async (): Promise<Assinatura[]> => {
-    const response = await api.get<{ success: boolean; data: Assinatura[] }>("/api/assinaturas/aguardando-aprovacao")
-    return response.data.data
-  },
 
 createAssinatura: async (data: CreateAssinaturaRequest | FormData): Promise<Assinatura> => {
   if (data instanceof FormData) {

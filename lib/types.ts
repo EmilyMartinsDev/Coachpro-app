@@ -244,7 +244,7 @@ export interface CreatePlanoTreinoRequest {
   coachId: string
   titulo: string
   descricao?: string
-  arquivo_url: any
+  arquivo: any
 }
 
 // Meal plan types

@@ -11,13 +11,9 @@ export function useFeedbacks(alunoId?: string) {
 
   useEffect(() => {
     const fetchFeedbacks = async () => {
-      if (!alunoId) {
-        setLoading(false)
-        return
-      }
-
+      setLoading(true)
       try {
-        const data = await FeedbackService.getFeedbacksByAlunoId(alunoId)
+        const data = await FeedbackService.getFeedbacks()
         setFeedbacks(data)
       } catch (err) {
         console.error("Error fetching feedbacks:", err)
@@ -28,7 +24,7 @@ export function useFeedbacks(alunoId?: string) {
     }
 
     fetchFeedbacks()
-  }, [alunoId])
+  }, [])
 
   const getFeedbackById = async (id: string) => {
     setLoading(true)

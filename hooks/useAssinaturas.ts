@@ -82,25 +82,7 @@ export function useAssinaturas(alunoId?: string) {
     }
   }
 
-  const getAssinaturasPendentes = async () => {
-    try {
-      const pendentes = await AssinaturaService.getAssinaturasPendentes()
-      return pendentes
-    } catch (err) {
-      console.error("Error fetching assinaturas pendentes:", err)
-      return []
-    }
-  }
 
-  const getAssinaturasAguardandoAprovacao = async () => {
-    try {
-      const aguardandoAprovacao = await AssinaturaService.getAssinaturasAguardandoAprovacao()
-      return aguardandoAprovacao
-    } catch (err) {
-      console.error("Error fetching assinaturas aguardando aprovação:", err)
-      return []
-    }
-  }
 
   return {
     assinaturas,
@@ -110,7 +92,5 @@ export function useAssinaturas(alunoId?: string) {
     getAssinaturaById,
     createAssinatura,
     updateAssinatura,
-    getAssinaturasPendentes,
-    getAssinaturasAguardandoAprovacao,
   }
 }

@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input"
 import { usePlanosAlimentares } from "@/hooks/usePlanosAlimentares"
 import { useTreinos } from "@/hooks/useTreinos"
 import { FileText, Download } from "lucide-react"
+import { FeedbackPhotosCarousel } from "@/components/feedback-carrousel"
 
 export default function FeedbackDetailPage() {
   const params = useParams()
@@ -29,7 +30,7 @@ export default function FeedbackDetailPage() {
   // Garante que coach e coach.alunos existem antes de acessar
   const feedback = coach?.alunos?.flatMap((a: any) => a.feedbacks || []).find((fb: any) => fb.id === feedbackId)
   const aluno = coach?.alunos?.find((a: any) => a.id === feedback?.alunoId)
-  const { updateRespostaFeedback } = useFeedbacks(aluno?.id as string)
+  const { updateRespostaFeedback } = useFeedbacks()
   const { createPlanoAlimentar, planosAlimentares, loading: loadingPlanosAlimentares } = usePlanosAlimentares(aluno?.id)
   const { createPlanoTreino, treinos, loading: loadingPlanosTreino } = useTreinos(aluno?.id)
 
@@ -357,17 +358,7 @@ export default function FeedbackDetailPage() {
                   {feedback.fotos && feedback.fotos.length === 0 ? (
                     <p>Nenhuma foto enviada com este feedback.</p>
                   ) : (
-                    <div className="grid gap-4">
-                      {feedback.fotos?.map((photo: any) => (
-                        <div key={photo.id} className="overflow-hidden rounded-md">
-                          <img
-                            src={photo.url || "/placeholder.svg"}
-                            alt="Foto de feedback"
-                            className="h-auto w-full object-cover"
-                          />
-                        </div>
-                      ))}
-                    </div>
+                  <FeedbackPhotosCarousel photos={feedback.fotos} key={feedback.id}/>
                   )}
                 </CardContent>
               </Card>

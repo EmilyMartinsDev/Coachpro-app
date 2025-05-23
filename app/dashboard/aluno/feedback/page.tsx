@@ -172,6 +172,15 @@ export default function EnviarFeedbackPage() {
       </div>
     )
   }
+  else if(aluno.feedbacks?.find(fed=>fed.diaFeedback === new Date().toISOString().split("T")[0])){
+      return (
+      <div className="container mx-auto py-12 max-w-xl text-center">
+        <h1 className="text-2xl font-bold mb-4">Seu feedback foi enviado com sucesso!</h1>
+        <p className="text-gray-600 mb-2">Aguarde as atualizações do seu coach!</p>
+      </div>
+    )
+  }
+
 
   return (
     <div className="container mx-auto py-6 max-w-2xl">
