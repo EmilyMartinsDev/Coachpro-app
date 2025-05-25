@@ -1,9 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { useAuth } from "@/hooks/useAuth"
-import CoachService from "@/lib/services/coach-service"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -19,40 +18,32 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { format } from "date-fns"
-import { FeedbackService } from "@/lib/services"
-import type { Coach } from "@/lib/types"
+import { useFeedbacks } from "@/hooks/coach/useFeedbacks"
 
 export default function FeedbacksPage() {
   const { user } = useAuth()
-  const [coach, setCoach] = useState<Coach | null>(null)
-  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
-  
-  useEffect(() => {
-    if (user?.id) {
-      CoachService.getCoachById(user.id).then((data) => {
-        setCoach(data)
-        setLoading(false)
-      })
-    }
-  }, [user?.id])
 
-  // Junta todos os feedbacks dos alunos
-  const feedbacks = coach?.alunos?.flatMap((a: any) => (a.feedbacks || []).map((fb: any) => ({ ...fb, alunoNome: a.nome }))) || []
-  const filteredFeedbacks = feedbacks.filter(
-    (feedback: any) =>
-      feedback.alunoNome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      new Date(feedback.diaFeedback).toLocaleDateString().includes(searchTerm),
-  )
-  const totalPages = Math.ceil(filteredFeedbacks.length / itemsPerPage)
-  const paginatedFeedbacks = filteredFeedbacks.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+  const { 
+    data: feedbacksResponse, 
+    isLoading,
+    isFetching 
+  } = useFeedbacks().listarFeedbacks({ 
+    page: currentPage,
+    pageSize: itemsPerPage,
+    search: searchTerm
+  })
 
-  // Reset to first page when search changes
-  useEffect(() => {
+  const feedbacks = feedbacksResponse?.data || []
+  const totalFeedbacks = feedbacksResponse?.total || 0
+  const totalPages = Math.ceil(totalFeedbacks / itemsPerPage)
+
+  const handleSearch = (term: string) => {
+    setSearchTerm(term)
     setCurrentPage(1)
-  }, [searchTerm])
+  }
 
   return (
     <div className="container mx-auto py-6">
@@ -70,16 +61,33 @@ export default function FeedbacksPage() {
             <Input
               placeholder="Buscar feedbacks..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => handleSearch(e.target.value)}
               className="max-w-sm"
+              disabled={isLoading} // Desabilita input durante loading
             />
           </div>
 
-          {loading ? (
-            <div className="space-y-2">
+          {(isLoading || isFetching) ? (
+            <div className="space-y-4">
+              {/* Header do skeleton */}
+              <div className="flex space-x-4">
+                <Skeleton className="h-10 w-1/5" />
+                <Skeleton className="h-10 w-1/5" />
+                <Skeleton className="h-10 w-1/5" />
+                <Skeleton className="h-10 w-1/5" />
+                <Skeleton className="h-10 w-1/5" />
+              </div>
+              {/* Linhas do skeleton */}
               {Array.from({ length: 5 }).map((_, i) => (
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
+              {/* Paginação skeleton */}
+              <div className="flex justify-center gap-2">
+                <Skeleton className="h-10 w-10" />
+                <Skeleton className="h-10 w-10" />
+                <Skeleton className="h-10 w-10" />
+                <Skeleton className="h-10 w-10" />
+              </div>
             </div>
           ) : (
             <>
@@ -95,16 +103,20 @@ export default function FeedbacksPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paginatedFeedbacks.length === 0 ? (
+                    {feedbacks.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center">
-                          Nenhum feedback encontrado
+                        <TableCell colSpan={5} className="text-center py-8">
+                          <div className="text-gray-500">
+                            {searchTerm ? 
+                              "Nenhum feedback encontrado para sua busca" : 
+                              "Nenhum feedback encontrado"}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ) : (
-                      paginatedFeedbacks.map((feedback: any) => (
+                      feedbacks.map((feedback) => (
                         <TableRow key={feedback.id}>
-                          <TableCell>{feedback.alunoNome}</TableCell>
+                          <TableCell>{feedback.aluno?.nome}</TableCell>
                           <TableCell>{format(new Date(feedback.diaFeedback), "dd/MM/yyyy")}</TableCell>
                           <TableCell>
                             <Badge
@@ -119,15 +131,15 @@ export default function FeedbacksPage() {
                               {feedback.seguiuPlano}
                             </Badge>
                           </TableCell>
-                            <TableCell>
+                          <TableCell>
                             <Badge
                               className={
                                 feedback.respondido 
                                   ? "bg-green-100 text-green-800"
-                                    : "bg-red-100 text-red-800"
+                                  : "bg-red-100 text-red-800"
                               }
                             >
-                              {feedback.respondido  ? "Respondido": "Não respondido"}
+                              {feedback.respondido ? "Respondido" : "Não respondido"}
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -157,7 +169,7 @@ export default function FeedbacksPage() {
                               setCurrentPage((prev) => Math.max(prev - 1, 1))
                             }
                           }}
-                          aria-disabled={currentPage === 1}
+                          aria-disabled={currentPage === 1 || isFetching}
                           tabIndex={currentPage === 1 ? -1 : 0}
                           className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
                         />
@@ -171,6 +183,7 @@ export default function FeedbacksPage() {
                               setCurrentPage(i + 1)
                             }}
                             isActive={currentPage === i + 1}
+                            aria-disabled={isFetching}
                           >
                             {i + 1}
                           </PaginationLink>
@@ -185,6 +198,8 @@ export default function FeedbacksPage() {
                               setCurrentPage((prev) => Math.min(prev + 1, totalPages))
                             }
                           }}
+                          aria-disabled={currentPage === totalPages || isFetching}
+                          className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
                         />
                       </PaginationItem>
                     </PaginationContent>

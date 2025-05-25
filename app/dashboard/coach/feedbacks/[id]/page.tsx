@@ -1,43 +1,43 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useState } from "react"
+import { useParams } from "next/navigation"
 import Link from "next/link"
-import { useCoachContext } from "@/lib/CoachContext"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Badge } from "@/components/ui/badge"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { useFeedbacks } from "@/hooks/useFeedbacks"
-import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
 import { z } from "zod"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { Input } from "@/components/ui/input"
-import { usePlanosAlimentares } from "@/hooks/usePlanosAlimentares"
-import { useTreinos } from "@/hooks/useTreinos"
 import { FileText, Download } from "lucide-react"
 import { FeedbackPhotosCarousel } from "@/components/feedback-carrousel"
+import { useAlunos } from "@/hooks/coach/useAlunos"
+import { useFeedbacks } from "@/hooks/coach/useFeedbacks"
+import { Separator } from "@radix-ui/react-select"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Badge } from "@/components/ui/badge"
+
+
 
 export default function FeedbackDetailPage() {
   const params = useParams()
   const feedbackId = params.id as string
-  const { coach, loading, error } = useCoachContext()
+  const { toast } = useToast()
 
-  // Garante que coach e coach.alunos existem antes de acessar
-  const feedback = coach?.alunos?.flatMap((a: any) => a.feedbacks || []).find((fb: any) => fb.id === feedbackId)
-  const aluno = coach?.alunos?.find((a: any) => a.id === feedback?.alunoId)
-  const { updateRespostaFeedback } = useFeedbacks()
-  const { createPlanoAlimentar, planosAlimentares, loading: loadingPlanosAlimentares } = usePlanosAlimentares(aluno?.id)
-  const { createPlanoTreino, treinos, loading: loadingPlanosTreino } = useTreinos(aluno?.id)
+  // Fetch feedback data
+  const { useDetalhesFeedback, responderFeedback } = useFeedbacks()
+  const { data: feedback, isLoading: loadingFeedback, error: errorFeedback } = useDetalhesFeedback(feedbackId)
+  
+  // Get methods for attaching plans
+  const { anexarPlanoAlimentar, anexarPlanoTreino } = useAlunos()
 
+  // Form states
   const [resposta, setResposta] = useState("")
   const [enviando, setEnviando] = useState(false)
   const [erroResposta, setErroResposta] = useState<string | null>(null)
-  const [feedbackLocal, setFeedbackLocal] = useState(feedback)
   const [tab, setTab] = useState("detalhes")
   const [planoAlimentarFile, setPlanoAlimentarFile] = useState<File | null>(null)
   const [planoTreinoFile, setPlanoTreinoFile] = useState<File | null>(null)
@@ -46,11 +46,6 @@ export default function FeedbackDetailPage() {
   const [planoAlimentarDescricao, setPlanoAlimentarDescricao] = useState("")
   const [planoTreinoTitulo, setPlanoTreinoTitulo] = useState("")
   const [planoTreinoDescricao, setPlanoTreinoDescricao] = useState("")
-  const { toast } = useToast()
-
-  useEffect(() => {
-    setFeedbackLocal(feedback)
-  }, [feedback])
 
   const handleResponderFeedback = async () => {
     setErroResposta(null)
@@ -63,8 +58,10 @@ export default function FeedbackDetailPage() {
     }
     setEnviando(true)
     try {
-      const atualizado = await updateRespostaFeedback(feedback.id, { resposta, respondido: true })
-      setFeedbackLocal(atualizado)
+      await responderFeedback.mutateAsync({
+        feedbackId: feedbackId,
+        data: { resposta, respondido: true }
+      })
       setResposta("")
       toast({ title: "Resposta enviada com sucesso!", variant: "default" })
     } catch (error) {
@@ -88,24 +85,20 @@ export default function FeedbackDetailPage() {
   }
 
   const handleUploadPlanos = async () => {
+    if (!feedback?.alunoId) return
+    
     setUploading(true)
     try {
       if (planoAlimentarFile && planoAlimentarTitulo) {
-        await createPlanoAlimentar({
-          titulo: planoAlimentarTitulo,
-          descricao: planoAlimentarDescricao,
-          alunoId: aluno?.id!,
-          coachId: coach?.id!,
-          arquivo: planoAlimentarFile,
+        await anexarPlanoAlimentar.mutateAsync({
+          alunoId: feedback.alunoId,
+          file: planoAlimentarFile
         })
       }
       if (planoTreinoFile && planoTreinoTitulo) {
-        await createPlanoTreino({
-          titulo: planoTreinoTitulo,
-          descricao: planoTreinoDescricao,
-          alunoId: aluno?.id!,
-          coachId: coach?.id!,
-          arquivo: planoTreinoFile,
+        await anexarPlanoTreino.mutateAsync({
+          alunoId: feedback.alunoId,
+          file: planoTreinoFile
         })
       }
       setPlanoAlimentarFile(null)
@@ -131,7 +124,7 @@ export default function FeedbackDetailPage() {
     document.body.removeChild(link)
   }
 
-  if (loading) {
+  if (loadingFeedback) {
     return (
       <div className="container mx-auto py-6">
         <div className="mb-8">
@@ -141,10 +134,11 @@ export default function FeedbackDetailPage() {
       </div>
     )
   }
-  if (error || !coach) {
+
+  if (errorFeedback) {
     return (
       <div className="container mx-auto py-6">
-        <p className="text-red-500">{error || "Erro ao carregar coach."}</p>
+        <p className="text-red-500">{errorFeedback.message}</p>
       </div>
     )
   }
@@ -172,12 +166,14 @@ export default function FeedbackDetailPage() {
           <Button variant="outline">Voltar para lista</Button>
         </Link>
       </div>
+      
       <Tabs value={tab} onValueChange={setTab} className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="detalhes">Detalhes</TabsTrigger>
           <TabsTrigger value="planos">Anexar Planos</TabsTrigger>
         </TabsList>
-   <TabsContent value="detalhes">
+
+        <TabsContent value="detalhes">
           <div className="grid gap-6 md:grid-cols-3">
             <div className="md:col-span-2">
               <Card>
@@ -185,7 +181,7 @@ export default function FeedbackDetailPage() {
                   <CardTitle>
                     Feedback de {format(new Date(feedback.diaFeedback), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                   </CardTitle>
-                  <CardDescription>Aluno: {aluno?.nome || "Aluno"}</CardDescription>
+                  <CardDescription>Aluno: {feedback.aluno?.nome || "Aluno"}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-6">
@@ -312,14 +308,13 @@ export default function FeedbackDetailPage() {
                 </CardContent>
               </Card>
 
-              {/* Resposta do coach ou textarea para responder */}
-              {feedbackLocal?.respondido ? (
+              {feedback.respondido ? (
                 <Card className="mt-6">
                   <CardHeader>
                     <CardTitle>Resposta do Coach</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="whitespace-pre-line text-gray-800">{feedbackLocal.resposta || feedbackLocal.respostaCoach}</p>
+                    <p className="whitespace-pre-line text-gray-800">{feedback.resposta}</p>
                   </CardContent>
                 </Card>
               ) : (
@@ -358,13 +353,14 @@ export default function FeedbackDetailPage() {
                   {feedback.fotos && feedback.fotos.length === 0 ? (
                     <p>Nenhuma foto enviada com este feedback.</p>
                   ) : (
-                  <FeedbackPhotosCarousel photos={feedback.fotos} key={feedback.id}/>
+                    <FeedbackPhotosCarousel photos={feedback.fotos} key={feedback.id}/>
                   )}
                 </CardContent>
               </Card>
             </div>
           </div>
         </TabsContent>
+
         <TabsContent value="planos">
           <div className="grid gap-6 md:grid-cols-2">
             <Card>
@@ -470,72 +466,65 @@ export default function FeedbackDetailPage() {
                 <CardDescription>Planos enviados anteriormente para este aluno</CardDescription>
               </CardHeader>
               <CardContent>
-                {loadingPlanosAlimentares || loadingPlanosTreino ? (
-                  <div className="space-y-4">
-                    <Skeleton className="h-20 w-full" />
-                    <Skeleton className="h-20 w-full" />
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <h3 className="font-medium">Planos Alimentares</h3>
-                    {planosAlimentares.length === 0 ? (
-                      <p className="text-sm text-gray-500">Nenhum plano alimentar enviado recentemente.</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {planosAlimentares.slice(0, 3).map((plano: any) => (
-                          <div key={plano.id} className="flex items-center justify-between rounded-md border p-3">
-                            <div>
-                              <p className="font-medium">{plano.titulo}</p>
-                              <p className="text-sm text-gray-500">
-                                {format(new Date(plano.createdAt), "dd/MM/yyyy")}
-                              </p>
-                              {plano.descricao && (
-                                <p className="text-sm text-gray-600 mt-1">{plano.descricao}</p>
-                              )}
-                            </div>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => handleDownload(plano.arquivo_url, `plano-alimentar-${plano.titulo}.pdf`)}
-                            >
-                              <Download className="h-4 w-4 mr-2" />
-                              Baixar
-                            </Button>
+                <div className="space-y-4">
+                  <h3 className="font-medium">Planos Alimentares</h3>
+                  {feedback.aluno?.planosAlimentar?.length === 0 ? (
+                    <p className="text-sm text-gray-500">Nenhum plano alimentar enviado recentemente.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {feedback.aluno?.planosAlimentar?.slice(0, 3).map((plano: any) => (
+                        <div key={plano.id} className="flex items-center justify-between rounded-md border p-3">
+                          <div>
+                            <p className="font-medium">{plano.titulo}</p>
+                            <p className="text-sm text-gray-500">
+                              {format(new Date(plano.createdAt), "dd/MM/yyyy")}
+                            </p>
+                            {plano.descricao && (
+                              <p className="text-sm text-gray-600 mt-1">{plano.descricao}</p>
+                            )}
                           </div>
-                        ))}
-                      </div>
-                    )}
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => handleDownload(plano.arquivo_url, `plano-alimentar-${plano.titulo}.pdf`)}
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            Baixar
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
-                    <h3 className="font-medium mt-6">Planos de Treino</h3>
-                    {treinos.length === 0 ? (
-                      <p className="text-sm text-gray-500">Nenhum plano de treino enviado recentemente.</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {treinos.slice(0, 3).map((plano: any) => (
-                          <div key={plano.id} className="flex items-center justify-between rounded-md border p-3">
-                            <div>
-                              <p className="font-medium">{plano.titulo}</p>
-                              <p className="text-sm text-gray-500">
-                                {format(new Date(plano.createdAt), "dd/MM/yyyy")}
-                              </p>
-                              {plano.descricao && (
-                                <p className="text-sm text-gray-600 mt-1">{plano.descricao}</p>
-                              )}
-                            </div>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => handleDownload(plano.arquivo_url, `plano-treino-${plano.titulo}.pdf`)}
-                            >
-                              <Download className="h-4 w-4 mr-2" />
-                              Baixar
-                            </Button>
+                  <h3 className="font-medium mt-6">Planos de Treino</h3>
+                  {feedback.aluno?.planosTreino?.length === 0 ? (
+                    <p className="text-sm text-gray-500">Nenhum plano de treino enviado recentemente.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {feedback.aluno?.planosTreino?.slice(0, 3).map((plano: any) => (
+                        <div key={plano.id} className="flex items-center justify-between rounded-md border p-3">
+                          <div>
+                            <p className="font-medium">{plano.titulo}</p>
+                            <p className="text-sm text-gray-500">
+                              {format(new Date(plano.createdAt), "dd/MM/yyyy")}
+                            </p>
+                            {plano.descricao && (
+                              <p className="text-sm text-gray-600 mt-1">{plano.descricao}</p>
+                            )}
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => handleDownload(plano.arquivo_url, `plano-treino-${plano.titulo}.pdf`)}
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            Baixar
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>

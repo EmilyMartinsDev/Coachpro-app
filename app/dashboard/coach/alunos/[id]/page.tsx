@@ -1,6 +1,5 @@
 "use client"
 
-import { useAluno } from "@/hooks/useAluno"
 import { useParams } from "next/navigation"
 import { useState } from "react"
 import Link from "next/link"
@@ -11,14 +10,13 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { usePlanosAlimentares } from "@/hooks/usePlanosAlimentares"
+import { useAlunos } from "@/hooks/coach/useAlunos"
 
 export default function AlunoDetailPage() {
   const params = useParams()
   const alunoId = params.id as string
-  const { aluno, loading, error } = useAluno(alunoId)
+  const { data: aluno, isLoading: loading, error } = useAlunos().useDetalhesAluno(alunoId) // Ajustado para usar o hook corretamente
   const [activeTab, setActiveTab] = useState("perfil")
-  const {downloadPlanoAlimentar} = usePlanosAlimentares()
 
   if (loading || !aluno) {
     return (
@@ -33,17 +31,9 @@ export default function AlunoDetailPage() {
   if (error) {
     return (
       <div className="container mx-auto py-6">
-        <p className="text-red-500">{error}</p>
+        <p className="text-red-500">{error.message}</p> {/* Ajustado para acessar a mensagem de erro */}
       </div>
     )
-  }
-
-  const handleDownloadPlanoAlimentar = async (planoId: string) => {
-    try {
-        await downloadPlanoAlimentar(planoId)
-    } catch (error) {
-      console.error("Erro ao baixar o plano alimentar:", error)
-    }
   }
 
   return (
@@ -108,7 +98,7 @@ export default function AlunoDetailPage() {
                     <Card key={assinatura.id}>
                       <CardContent className="p-4">
                         <div className="mb-2 flex items-center justify-between">
-                          <h3 className="font-medium">{assinatura.plano?.titulo || "Plano"}</h3>
+                          <h3 className="font-medium">{assinatura?.parcelamento?.plano?.titulo || "Plano"}</h3>
                           <Badge
                             className={
                               assinatura.status === "ATIVA"
@@ -126,21 +116,21 @@ export default function AlunoDetailPage() {
                         <div className="grid gap-2 md:grid-cols-2">
                           <div>
                             <span className="text-sm font-medium text-gray-500">Valor:</span>{" "}
-                            <span>R$ {assinatura.valor.toFixed(2)}</span>
+                            <span>R$ {assinatura.parcelamento.valorParcela.toFixed(2)}</span>
                           </div>
                           <div>
                             <span className="text-sm font-medium text-gray-500">Parcela:</span>{" "}
                             <span>
-                              {assinatura.parcela}/{assinatura.totalParcelas}
+                              {assinatura.parcela}/{assinatura.parcelamento.quantidadeParcela}
                             </span>
                           </div>
                           <div>
                             <span className="text-sm font-medium text-gray-500">Início:</span>{" "}
-                            <span>{new Date(assinatura.dataInicio).toLocaleDateString()}</span>
+                            <span>{new Date(assinatura.dataInicio as string).toLocaleDateString()}</span>
                           </div>
                           <div>
                             <span className="text-sm font-medium text-gray-500">Fim:</span>{" "}
-                            <span>{new Date(assinatura.dataFim).toLocaleDateString()}</span>
+                            <span>{new Date(assinatura.dataFim as string).toLocaleDateString()}</span>
                           </div>
                         </div>
                         {assinatura.comprovante_url && (
@@ -223,7 +213,7 @@ export default function AlunoDetailPage() {
                           <h3 className="font-medium">{treino.titulo}</h3>
                           <p className="text-sm text-gray-500">{new Date(treino.createdAt).toLocaleDateString()}</p>
                         </div>
-                        <a  target="_blank"  href={treino.arquivo_url} rel="noopener noreferrer">
+                        <a target="_blank" href={treino.arquivo_url as string} rel="noopener noreferrer">
                           <Button variant="outline" size="sm">
                             Visualizar
                           </Button>
@@ -250,7 +240,7 @@ export default function AlunoDetailPage() {
                           <h3 className="font-medium">{plano.titulo}</h3>
                           <p className="text-sm text-gray-500">{new Date(plano.createdAt).toLocaleDateString()}</p>
                         </div>
-                        <a target="_blank" href={plano.arquivo_url} rel="noopener noreferrer">
+                        <a target="_blank" href={plano.arquivo_url as string} rel="noopener noreferrer">
                           <Button variant="outline" size="sm">
                             Visualizar
                           </Button>

@@ -4,7 +4,7 @@ import type { User } from "../types"
 export interface LoginRequest {
   email: string
   senha: string
-  tipo: "coach" | "aluno"
+  role: "COACH" | "ALUNO"
 }
 
 export interface RegisterCoachRequest {
@@ -57,7 +57,7 @@ const AuthService = {
   getCurrentUser: (): User | null => {
     if (typeof window !== "undefined") {
       const user = localStorage.getItem("user")
-      return user ? JSON.parse(user) : null
+      return user ? JSON?.parse(user) : null
     }
     return null
   },

@@ -28,7 +28,7 @@ export default function DashboardLayout({
 
   // Definir os links de navegação com base no tipo de usuário
   const navLinks =
-    user?.tipo === "coach"
+    user?.role === "COACH"
       ? [
           { href: "/dashboard/coach", label: "Dashboard", icon: <LayoutDashboard className="h-5 w-5" /> },
           { href: "/dashboard/coach/alunos", label: "Alunos", icon: <Users className="h-5 w-5" /> },
@@ -47,9 +47,9 @@ export default function DashboardLayout({
   }
 
   // Envolver children com CoachProvider apenas se for coach
-  if (user?.tipo === "coach") {
+  if (user?.role === "COACH") {
     return (
-      <CoachProvider>
+
         <div className="flex min-h-screen">
           {/* Sidebar/Aside */}
           <aside className="hidden md:flex md:flex-col md:w-64 bg-white border-r border-gray-200 p-6">
@@ -71,14 +71,12 @@ export default function DashboardLayout({
           {/* Main content */}
           <main className="flex-1 bg-gray-50 min-h-screen">{children}</main>
         </div>
-      </CoachProvider>
     )
   }
 
   // Layout padrão para aluno
   return (
     <div className="flex min-h-screen">
-      <AlunoProvider>
       {/* Sidebar/Aside */}
       <aside className="hidden md:flex md:flex-col md:w-64 bg-white border-r border-gray-200 p-6">
         <div className="mb-8 flex items-center gap-2">
@@ -98,7 +96,6 @@ export default function DashboardLayout({
       </aside>
       {/* Main content */}
       <main className="flex-1 bg-gray-50 min-h-screen">{children}</main>
-      </AlunoProvider>
     </div>
   )
 }

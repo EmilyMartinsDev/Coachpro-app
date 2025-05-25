@@ -3,27 +3,47 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAuth } from "@/hooks/useAuth"
-import { useEffect, useState } from "react"
-import CoachService from "@/lib/services/coach-service"
+
 import Link from "next/link"
 import { ArrowRight, Dumbbell, MessageSquare, UserPlus, Users, Utensils } from "lucide-react"
-import { Coach, Aluno, Feedback } from "@/lib/types"
+import { useEffect, useState } from "react"
+import { Feedback, Aluno } from "@/lib/types"
+import { useAlunos } from "@/hooks/coach/useAlunos"
+import { useFeedbacks } from "@/hooks/coach/useFeedbacks"
 
 export default function CoachDashboard() {
   const { user, isLoading: authLoading } = useAuth()
-  const [coach, setCoach] = useState<Coach | null>(null)
   const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [pageSize] = useState(10)
+
+  // Usando os hooks
+  const {
+    alunos,
+    isLoading: alunosLoading,
+    total: totalAlunos,
+  } = useAlunos({
+    page,
+    pageSize,
+  })
+
+  const {
+    listarFeedbacks
+  } = useFeedbacks()
+
+  const { data: feedbacksData, isLoading } = listarFeedbacks({
+    respondido: false,
+    page,
+    pageSize,
+  })
 
   useEffect(() => {
-    if (user?.id) {
-      CoachService.getCoachById(user.id).then((data) => {
-        setCoach(data)
-        setLoading(false)
-      })
+    if (!authLoading && user?.id) {
+      setLoading(false)
     }
-  }, [user?.id])
+  }, [authLoading, user])
 
-  if (authLoading || loading) {
+  if (authLoading || alunosLoading || isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-600"></div>
@@ -31,22 +51,19 @@ export default function CoachDashboard() {
     )
   }
 
-  if (!user || !coach) {
+  if (!user) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p>Erro ao carregar dados do coach.</p>
+        <p>Erro ao carregar dados do usuário.</p>
       </div>
     )
   }
 
-  // Dados aninhados
-  const alunos = coach.alunos || []
-  const feedbacks = alunos.flatMap((a) => a.feedbacks || [])
-  const treinos = alunos.flatMap((a) => a.planosTreino || [])
-  const planosAlimentares = alunos.flatMap((a) => a.planosAlimentar || [])
-  const sortedFeedbacks = [...feedbacks].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-  ).filter((feedbacks)=> feedbacks.respondido === false)
+  // Dados processados
+  const feedbacks = feedbacksData?.data || []
+  const totalFeedbacks = feedbacksData?.total || 0
+  const treinos = alunos?.flatMap((a: Aluno) => a.planosTreino || []) || []
+  const planosAlimentares = alunos?.flatMap((a: Aluno) => a.planosAlimentar || []) || []
 
   return (
     <div className="space-y-6">
@@ -72,7 +89,7 @@ export default function CoachDashboard() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold">{alunos.length}</div>
+              <div className="text-2xl font-bold">{totalAlunos}</div>
               <Users className="h-8 w-8 text-emerald-600" />
             </div>
           </CardContent>
@@ -108,7 +125,7 @@ export default function CoachDashboard() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold">{feedbacks.filter(fed=>!fed.respondido).length}</div>
+              <div className="text-2xl font-bold">{totalFeedbacks}</div>
               <MessageSquare className="h-8 w-8 text-emerald-600" />
             </div>
           </CardContent>
@@ -124,7 +141,7 @@ export default function CoachDashboard() {
           <CardContent>
             {alunos.length > 0 ? (
               <div className="space-y-4">
-                {alunos.slice(0, 5).map((aluno) => (
+                {alunos.slice(0, 5).map((aluno: Aluno) => (
                   <div key={aluno.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex items-center">
                       <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 font-bold">
@@ -163,10 +180,10 @@ export default function CoachDashboard() {
             <CardDescription>Feedbacks pendentes de resposta</CardDescription>
           </CardHeader>
           <CardContent>
-            {sortedFeedbacks.length > 0 ? (
+            {feedbacks.length > 0 ? (
               <div className="space-y-4">
-                {sortedFeedbacks.slice(0, 5).map((feedback) => {
-                  const aluno = alunos.find((a) => a.id === feedback.alunoId)
+                {feedbacks.slice(0, 5).map((feedback: Feedback) => {
+                  const aluno = alunos.find((a: Aluno) => a.id === feedback.alunoId)
                   return (
                     <div key={feedback.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center">
@@ -190,10 +207,10 @@ export default function CoachDashboard() {
                 })}
               </div>
             ) : (
-              <p className="text-gray-500">Nenhum feedback recente.</p>
+              <p className="text-gray-500">Nenhum feedback pendente.</p>
             )}
 
-            {sortedFeedbacks.length > 5 && (
+            {feedbacks.length > 5 && (
               <div className="mt-4 text-center">
                 <Link href="/dashboard/coach/feedbacks">
                   <Button variant="outline">Ver Todos</Button>
