@@ -1,57 +1,61 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import Link from "next/link"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { FileText, Eye, Download, Calendar } from "lucide-react"
-import { useAuth } from "@/hooks/useAuth"
-import { useAluno } from "@/hooks/useAluno"
-import type { PlanoTreino, PlanoAlimentar } from "@/lib/types"
+import Link from "next/link";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { FileText, Eye, Calendar } from "lucide-react";
+import { useTreinoAluno } from "@/hooks/aluno/useTreinoAluno";
+import { useDietaAluno } from "@/hooks/aluno/useDietaAluno";
+import type { PlanoTreino, PlanoAlimentar } from "@/lib/types";
 
 export default function PlanosPage() {
-  const { user } = useAuth()
-  const { aluno, loading, error } = useAluno(user?.id)
+  const { data: treinosData, isLoading: loadingTreinos, error: errorTreinos } = useTreinoAluno();
+  const { data: dietasData, isLoading: loadingDietas, error: errorDietas } = useDietaAluno();
 
-  // Usa os planos aninhados do aluno
-  const planosTreino = aluno?.planosTreino || []
-  const planosAlimentares = aluno?.planosAlimentar || []
+  const planosTreino = treinosData?.data || [];
+  const planosAlimentares = dietasData?.data || [];
 
-  // Agrupar planos por versão (mesmo título)
   const agruparPlanosPorVersao = (planos: (PlanoTreino | PlanoAlimentar)[]) => {
-    const grupos: Record<string, (PlanoTreino | PlanoAlimentar)[]> = {}
+    const grupos: Record<string, (PlanoTreino | PlanoAlimentar)[]> = {};
     planos.forEach((plano) => {
       if (!grupos[plano.titulo]) {
-        grupos[plano.titulo] = []
+        grupos[plano.titulo] = [];
       }
-      grupos[plano.titulo].push(plano)
-    })
-    // Ordenar cada grupo por data (mais recente primeiro)
+      grupos[plano.titulo].push(plano);
+    });
+
     Object.keys(grupos).forEach((titulo) => {
-      grupos[titulo].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    })
-    return grupos
-  }
+      grupos[titulo].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    });
 
-  const planosTreinoAgrupados = agruparPlanosPorVersao(planosTreino)
-  const planosAlimentaresAgrupados = agruparPlanosPorVersao(planosAlimentares)
+    return grupos;
+  };
 
-  if (loading) {
+  const planosTreinoAgrupados = agruparPlanosPorVersao(planosTreino);
+  const planosAlimentaresAgrupados = agruparPlanosPorVersao(planosAlimentares);
+
+  const isLoading = loadingTreinos || loadingDietas;
+  const error = errorTreinos || errorDietas;
+
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-600"></div>
       </div>
-    )
+    );
   }
-  if (error || !aluno) {
+
+  if (error) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p>Erro ao carregar dados do aluno.</p>
+        <p>Erro ao carregar dados dos planos.</p>
       </div>
-    )
+    );
   }
 
   return (
@@ -68,159 +72,101 @@ export default function PlanosPage() {
         </TabsList>
 
         <TabsContent value="treino">
-          <Card>
-            <CardHeader>
-              <CardTitle>Planos de Treino</CardTitle>
-              <CardDescription>Seus planos de treino personalizados</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {Object.keys(planosTreinoAgrupados).length > 0 ? (
-                <div className="space-y-6">
-                  {Object.entries(planosTreinoAgrupados).map(([titulo, planos]) => (
-                    <div key={titulo} className="border rounded-lg overflow-hidden">
-                      <div className="bg-gray-50 p-4 flex items-center justify-between">
-                        <div className="flex items-center">
-                          <FileText className="h-5 w-5 text-emerald-600 mr-3" />
-                          <div>
-                            <h3 className="font-medium">{titulo}</h3>
-                            <p className="text-sm text-gray-500">
-                              {planos.length > 1 ? `${planos.length} versões` : "1 versão"}
-                            </p>
-                          </div>
-                        </div>
-                        <Badge className="bg-emerald-100 text-emerald-800">Atual</Badge>
-                      </div>
-
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Versão</TableHead>
-                            <TableHead>Data de Criação</TableHead>
-                            <TableHead className="text-right">Ações</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {planos.map((plano, index) => (
-                            <TableRow key={plano.id}>
-                              <TableCell>
-                                {index === 0 ? (
-                                  <Badge className="bg-emerald-100 text-emerald-800">Atual</Badge>
-                                ) : (
-                                  <Badge variant="outline">v{planos.length - index}</Badge>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center">
-                                  <Calendar className="h-4 w-4 text-gray-500 mr-2" />
-                                  {new Date(plano.createdAt).toLocaleDateString("pt-BR")}
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex justify-end gap-2">
-                                  <Link href={plano?.arquivo_url || ""}>
-                                    <Button size="sm" variant="outline">
-                                      <Eye className="h-4 w-4 mr-1" />
-                                      Ver
-                                    </Button>
-                                  </Link>
-                                
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Nenhum plano de treino</h3>
-                  <p className="text-gray-500">Você ainda não possui planos de treino.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <PlanoCard titulo="Planos de Treino" descricao="Seus planos de treino personalizados" planosAgrupados={planosTreinoAgrupados} />
         </TabsContent>
 
         <TabsContent value="alimentar">
-          <Card>
-            <CardHeader>
-              <CardTitle>Planos Alimentares</CardTitle>
-              <CardDescription>Seus planos alimentares personalizados</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {Object.keys(planosAlimentaresAgrupados).length > 0 ? (
-                <div className="space-y-6">
-                  {Object.entries(planosAlimentaresAgrupados).map(([titulo, planos]) => (
-                    <div key={titulo} className="border rounded-lg overflow-hidden">
-                      <div className="bg-gray-50 p-4 flex items-center justify-between">
-                        <div className="flex items-center">
-                          <FileText className="h-5 w-5 text-emerald-600 mr-3" />
-                          <div>
-                            <h3 className="font-medium">{titulo}</h3>
-                            <p className="text-sm text-gray-500">
-                              {planos.length > 1 ? `${planos.length} versões` : "1 versão"}
-                            </p>
-                          </div>
-                        </div>
-                        <Badge className="bg-emerald-100 text-emerald-800">Atual</Badge>
-                      </div>
-
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Versão</TableHead>
-                            <TableHead>Data de Criação</TableHead>
-                            <TableHead className="text-right">Ações</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {planos.map((plano, index) => (
-                            <TableRow key={plano.id}>
-                              <TableCell>
-                                {index === 0 ? (
-                                  <Badge className="bg-emerald-100 text-emerald-800">Atual</Badge>
-                                ) : (
-                                  <Badge variant="outline">v{planos.length - index}</Badge>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center">
-                                  <Calendar className="h-4 w-4 text-gray-500 mr-2" />
-                                  {new Date(plano.createdAt).toLocaleDateString("pt-BR")}
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex justify-end gap-2">
-                                  <Link href={plano?.arquivo_url || ""}>
-                                    <Button size="sm" variant="outline">
-                                      <Eye className="h-4 w-4 mr-1" />
-                                      Ver
-                                    </Button>
-                                  </Link>
-                            
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Nenhum plano alimentar</h3>
-                  <p className="text-gray-500">Você ainda não possui planos alimentares.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <PlanoCard titulo="Planos Alimentares" descricao="Seus planos alimentares personalizados" planosAgrupados={planosAlimentaresAgrupados} />
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
+}
+
+interface PlanoCardProps {
+  titulo: string;
+  descricao: string;
+  planosAgrupados: Record<string, (PlanoTreino | PlanoAlimentar)[]>;
+}
+
+function PlanoCard({ titulo, descricao, planosAgrupados }: PlanoCardProps) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{titulo}</CardTitle>
+        <CardDescription>{descricao}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {Object.keys(planosAgrupados).length > 0 ? (
+          <div className="space-y-6">
+            {Object.entries(planosAgrupados).map(([titulo, planos]) => (
+              <div key={titulo} className="border rounded-lg overflow-hidden">
+                <div className="bg-gray-50 p-4 flex items-center justify-between">
+                  <div className="flex items-center">
+                    <FileText className="h-5 w-5 text-emerald-600 mr-3" />
+                    <div>
+                      <h3 className="font-medium">{titulo}</h3>
+                      <p className="text-sm text-gray-500">
+                        {planos.length > 1 ? `${planos.length} versões` : "1 versão"}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge className="bg-emerald-100 text-emerald-800">Atual</Badge>
+                </div>
+
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Versão</TableHead>
+                      <TableHead>Data de Criação</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {planos.map((plano, index) => (
+                      <TableRow key={plano.id}>
+                        <TableCell>
+                          {index === 0 ? (
+                            <Badge className="bg-emerald-100 text-emerald-800">Atual</Badge>
+                          ) : (
+                            <Badge variant="outline">v{planos.length - index}</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <Calendar className="h-4 w-4 text-gray-500 mr-2" />
+                            {new Date(plano.createdAt).toLocaleDateString("pt-BR")}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            {plano.arquivo_url ? (
+                              <Link href={plano.arquivo_url} target="_blank" rel="noopener noreferrer">
+                                <Button size="sm" variant="outline">
+                                  <Eye className="h-4 w-4 mr-1" />
+                                  Ver
+                                </Button>
+                              </Link>
+                            ) : (
+                              <span className="text-sm text-gray-500">Sem arquivo</span>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium mb-2">Nenhum plano</h3>
+            <p className="text-gray-500">Você ainda não possui {titulo.toLowerCase()}.</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 }

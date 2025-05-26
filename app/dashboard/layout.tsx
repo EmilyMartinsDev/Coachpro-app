@@ -34,6 +34,7 @@ export default function DashboardLayout({
           { href: "/dashboard/coach/alunos", label: "Alunos", icon: <Users className="h-5 w-5" /> },
           { href: "/dashboard/coach/feedbacks", label: "Feedbacks", icon: <MessageSquare className="h-5 w-5" /> },
           { href: "/dashboard/coach/assinaturas", label: "Assinaturas", icon: <CreditCard className="h-5 w-5" /> },
+          
         ]
       : [
           { href: "/dashboard/aluno", label: "Dashboard", icon: <LayoutDashboard className="h-5 w-5" /> },

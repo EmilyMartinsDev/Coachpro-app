@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Aluno, PlanoAlimentar, PlanoTreino } from '@/lib/types';
+import { Aluno, CreateAlunoRequest, PlanoAlimentar, PlanoTreino } from '@/lib/types';
 import { alunoService } from '@/lib/services/coach/alunos.service';
 
 interface ListarAlunosParams {
@@ -26,7 +26,8 @@ export function useAlunos(params: ListarAlunosParams = {}) {
   const { 
     data: response, 
     isLoading, 
-    isFetching 
+    isFetching ,
+    error
   } = useQuery<ListarAlunosResponse>({
     queryKey: ['alunos', params],
     queryFn: () => alunoService.listarAlunos(params),
@@ -49,7 +50,7 @@ export function useAlunos(params: ListarAlunosParams = {}) {
 
   // Cadastrar aluno
   const cadastrarAluno = useMutation({
-    mutationFn: (dados: Omit<Aluno, 'id'> & { coachId: string }) => 
+    mutationFn: (dados: CreateAlunoRequest) => 
       alunoService.cadastrarAluno(dados),
     onSuccess: () => {
       queryClient.invalidateQueries({ 
@@ -87,7 +88,8 @@ export function useAlunos(params: ListarAlunosParams = {}) {
     isFetching,
     useDetalhesAluno,
     cadastrarAluno,
-
+    isPedinding: cadastrarAluno.isPending,
+error,
     anexarPlanoAlimentar,
     anexarPlanoTreino,
   };

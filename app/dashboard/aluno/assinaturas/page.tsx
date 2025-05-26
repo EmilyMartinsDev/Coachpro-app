@@ -1,48 +1,25 @@
 "use client"
 
-import type React from "react"
-
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus, Calendar, CheckCircle, AlertCircle, Clock, Ban, HourglassIcon } from "lucide-react"
-import { useAuth } from "@/hooks/useAuth"
-import { useAluno } from "@/hooks/useAluno"
-import { usePlanos } from "@/hooks/usePlanos"
-import type { Assinatura, Plano } from "@/lib/types"
-import { useAssinaturas } from "@/hooks/useAssinaturas"
+import { Calendar, CheckCircle, AlertCircle, Clock, Ban, HourglassIcon } from "lucide-react"
+import { useAssinaturasAluno } from "@/hooks/aluno/useAssinaturaAluno"
 import { useRouter } from "next/navigation"
 
-export default function AssinaturasPage() {
-  const { user } = useAuth()
-  const {createAssinatura, assinaturas, loading} = useAssinaturas(user?.id)
-  const { planos, loading: planosLoading } = usePlanos()
-  const router = useRouter()
 
-  const [dialogOpen, setDialogOpen] = useState(false)
+export default function AssinaturasPage() {
+  const router = useRouter()
+  const { data: assinaturasResponse, isLoading } = useAssinaturasAluno()
+
+
   const [activeTab, setActiveTab] = useState("todas")
-  const [formData, setFormData] = useState({
-    planoId: "",
-    dataInicio: "",
-    dataFim: "",
-    valor: "",
-  })
- 
+
+  // Extrai a lista de assinaturas da resposta
+  const assinaturas = assinaturasResponse?.data || []
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -58,7 +35,6 @@ export default function AssinaturasPage() {
             <Clock className="h-3 w-3 mr-1" /> Pendente
           </Badge>
         )
-  
       case "PENDENTE_APROVACAO":
         return (
           <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
@@ -105,7 +81,7 @@ export default function AssinaturasPage() {
     return true
   })
 
- if (loading) {
+  if (isLoading ) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-600"></div>
@@ -120,9 +96,7 @@ export default function AssinaturasPage() {
           <h1 className="text-2xl font-bold">Minhas Assinaturas</h1>
           <p className="text-gray-500">Gerencie suas assinaturas de planos</p>
         </div>
-        
       </div>
-   
 
       {/* Adicionar card explicativo dos status */}
       <Card className="mb-6">
@@ -172,7 +146,6 @@ export default function AssinaturasPage() {
           {filteredAssinaturas.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredAssinaturas.map((assinatura) => {
-                const plano = planos.find((p) => p.id === assinatura.planoId)
                 const diasRestantes = calcularDiasRestantes(assinatura.dataFim)
                 const progresso = calcularProgresso(assinatura.dataInicio, assinatura.dataFim)
 
@@ -195,7 +168,7 @@ export default function AssinaturasPage() {
                   >
                     <CardHeader>
                       <div className="flex items-center justify-between">
-                        <CardTitle>{plano?.titulo || "Plano"}</CardTitle>
+                        <CardTitle>{assinatura.parcelamento?.plano?.titulo || "Plano"}</CardTitle>
                         {getStatusBadge(assinatura.status)}
                       </div>
                       <CardDescription>
@@ -205,7 +178,7 @@ export default function AssinaturasPage() {
                     <CardContent className="space-y-4">
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-gray-500">Valor:</span>
-                        <span className="font-medium">R$ {assinatura.valor.toFixed(2)}</span>
+                        <span className="font-medium">R$ {assinatura.parcelamento.valorParcela.toFixed(2)}</span>
                       </div>
 
                       <div className="flex items-center">
@@ -220,6 +193,13 @@ export default function AssinaturasPage() {
                             {new Date(assinatura.dataFim).toLocaleDateString("pt-BR")}
                           </p>
                         </div>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-500">Parcela:</span>
+                        <span className="font-medium">
+                          {assinatura.parcela}/{assinatura.parcelamento.quantidadeParcela}
+                        </span>
                       </div>
 
                       {(assinatura.status === "ATIVA" || assinatura.status === "PENDENTE") && (
@@ -242,10 +222,10 @@ export default function AssinaturasPage() {
                         </div>
                       )}
 
-                      {assinatura.status === "INATIVA" && (
+                      {assinatura.status === "CANCELADA" && (
                         <div className="bg-red-50 p-2 rounded-md text-sm text-red-800 flex items-start">
                           <Ban className="h-4 w-4 mr-2 mt-0.5" />
-                          <p>Assinatura inativa. Entre em contato com o suporte.</p>
+                          <p>Assinatura cancelada. Entre em contato com o suporte.</p>
                         </div>
                       )}
                     </CardContent>

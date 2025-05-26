@@ -8,16 +8,27 @@ import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar, Dumbbell, FileText, MessageSquare, Utensils, ArrowRight, ClipboardCheck } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
-import { useAluno } from "@/hooks/useAluno"
+import { useTreinoAluno } from "@/hooks/aluno/useTreinoAluno"
+import { useDietaAluno } from "@/hooks/aluno/useDietaAluno"
+import { useFeedbackAluno } from "@/hooks/aluno/useFeedbackAluno"
+import { useAnamneseAluno } from "@/hooks/aluno/useAnamneseAluno"
+import { useAssinaturasAluno } from "@/hooks/aluno/useAssinaturaAluno"
+
 
 export default function AlunoDashboard() {
   const { user } = useAuth()
-  const { aluno, loading, error } = useAluno(user?.id)
+
+  const { enviarAnamnese } = useAnamneseAluno()
+
+  const {data: treinos, isLoading: loadingTreinos} = useTreinoAluno()
+  const{data: dietas, isLoading: loadingDietas} = useDietaAluno()
+  const {data: feedbacks} = useFeedbackAluno()
+
   const [proximosFeedbacks, setProximosFeedbacks] = useState<{ data: string; status: string }[]>([])
 
   // Calcula próximos feedbacks baseado nos feedbacks do aluno
   useEffect(() => {
-    if (!aluno) return
+    if (!feedbacks) return
     const hoje = new Date()
     const proximos: { data: string; status: string }[] = [
       {
@@ -29,34 +40,35 @@ export default function AlunoDashboard() {
         status: "pendente",
       },
     ]
-    if (aluno.feedbacks && aluno.feedbacks.length > 0) {
-      const ultimoFeedback = aluno.feedbacks[0]
+    if (feedbacks.data.length > 0) {
+      const ultimoFeedback = feedbacks.data[0]
       proximos.push({
-        data: ultimoFeedback.createdAt,
+        data: ultimoFeedback.createdAt.toString(),
         status: "concluido",
       })
     }
     setProximosFeedbacks(proximos)
-  }, [aluno])
+  }, [feedbacks])
 
-  if (loading) {
+  const isLoading = loadingTreinos || loadingDietas
+
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-600"></div>
       </div>
     )
   }
-  if (error || !aluno) {
+
+  if (!user) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p>Erro ao carregar dados do aluno.</p>
+        <p>Erro ao carregar dados do usuário.</p>
       </div>
     )
   }
 
-  const planosTreino = aluno.planosTreino || []
-  const planosAlimentares = aluno.planosAlimentar || []
-  const isNovoAluno = planosTreino.length === 0 && planosAlimentares.length === 0 && aluno.anamnese === null
+  const isNovoAluno = (!treinos || treinos.data.length === 0) && (!dietas || dietas.data.length === 0)
 
   // Se for um novo aluno, mostrar o card de boas-vindas e o link para o formulário de anamnese
   if (isNovoAluno) {
@@ -64,7 +76,7 @@ export default function AlunoDashboard() {
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Olá, {aluno.nome.split(" ")[0]}!</h1>
+            <h1 className="text-2xl font-bold">Olá, {user.nome.split(" ")[0]}!</h1>
             <p className="text-gray-500">Bem-vindo(a) ao CoachPro</p>
           </div>
         </div>
@@ -112,7 +124,7 @@ export default function AlunoDashboard() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Olá, {aluno.nome.split(" ")[0]}!</h1>
+          <h1 className="text-2xl font-bold">Olá, {user.nome.split(" ")[0]}!</h1>
           <p className="text-gray-500">Bem-vindo ao seu dashboard</p>
         </div>
         <div className="mt-4 md:mt-0">
@@ -132,7 +144,7 @@ export default function AlunoDashboard() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold">{planosTreino.length}</div>
+              <div className="text-2xl font-bold">{treinos?.data.length || 0}</div>
               <Dumbbell className="h-8 w-8 text-emerald-600" />
             </div>
           </CardContent>
@@ -144,7 +156,7 @@ export default function AlunoDashboard() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold">{planosAlimentares.length}</div>
+              <div className="text-2xl font-bold">{dietas?.data.length || 0}</div>
               <Utensils className="h-8 w-8 text-emerald-600" />
             </div>
           </CardContent>
@@ -180,9 +192,9 @@ export default function AlunoDashboard() {
             </TabsList>
 
             <TabsContent value="treino">
-              {planosTreino.length > 0 ? (
+              {treinos && treinos.data.length > 0 ? (
                 <div className="space-y-4">
-                  {planosTreino.map((plano) => (
+                  {treinos.data.map((plano) => (
                     <div key={plano.id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="flex items-center">
                         <FileText className="h-5 w-5 text-emerald-600 mr-3" />
@@ -207,9 +219,9 @@ export default function AlunoDashboard() {
             </TabsContent>
 
             <TabsContent value="alimentar">
-              {planosAlimentares.length > 0 ? (
+              {dietas && dietas.data.length > 0 ? (
                 <div className="space-y-4">
-                  {planosAlimentares.map((plano) => (
+                  {dietas.data.map((plano) => (
                     <div key={plano.id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="flex items-center">
                         <FileText className="h-5 w-5 text-emerald-600 mr-3" />

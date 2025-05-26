@@ -1,5 +1,5 @@
 import api from "@/lib/api";
-import { Aluno, Paginacao, PlanoAlimentar, PlanoTreino } from "@/lib/types";
+import { Aluno, CreateAlunoRequest, Paginacao, PlanoAlimentar, PlanoTreino } from "@/lib/types";
 
 
 interface ListarAlunosParams {
@@ -25,7 +25,7 @@ class AlunoService {
   }
 
   // Cadastrar novo aluno
-  async cadastrarAluno(dados: Omit<Aluno, 'id'>): Promise<Aluno> {
+  async cadastrarAluno(dados: CreateAlunoRequest): Promise<Aluno> {
     const response = await api.post<Aluno>('/api/coach/alunos/', dados);
     return response.data;
   }

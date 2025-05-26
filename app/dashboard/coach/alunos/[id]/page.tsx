@@ -126,11 +126,11 @@ export default function AlunoDetailPage() {
                           </div>
                           <div>
                             <span className="text-sm font-medium text-gray-500">Início:</span>{" "}
-                            <span>{new Date(assinatura.dataInicio as string).toLocaleDateString()}</span>
+                            <span>{new Date(assinatura.dataInicio as string).toLocaleDateString() || "Data será definida após o ativamento"}</span>
                           </div>
                           <div>
                             <span className="text-sm font-medium text-gray-500">Fim:</span>{" "}
-                            <span>{new Date(assinatura.dataFim as string).toLocaleDateString()}</span>
+                            <span>{new Date(assinatura.dataFim as string).toLocaleDateString() || "Data será definida após o ativameneto"}</span>
                           </div>
                         </div>
                         {assinatura.comprovante_url && (

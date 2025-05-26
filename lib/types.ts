@@ -44,6 +44,15 @@ export interface Aluno {
   diaFeedback?: string
 }
 
+export type CreateAlunoRequest = {
+    nome:string
+  email:string
+  senha:string,
+  telefone:string
+  dataNascimento:string
+  diaFeedback:string
+}
+
 export interface CoachSummary {
   id: string
   nome: string
@@ -79,8 +88,10 @@ export interface Plano {
 export interface CreatePlanoRequest {
   titulo: string
   descricao?: string
-  valor: number
-  duracao: number
+  parcelamentos:{
+    valorParcela: number;
+    quantidadeParcela: number;
+  }[]
 }
 
 // Parcelamento types
@@ -107,6 +118,8 @@ export interface Assinatura {
   createdAt: string;
   updatedAt: string;
   parcelamento: Parcelamento;
+  aluno:Aluno
+
 }
 
 export interface ComprovanteAssinatura {
@@ -169,6 +182,8 @@ export interface Feedback {
   aluno:{
     id:string
     nome:string
+    planosAlimentar:PlanoAlimentar[]
+    planosTreino:PlanoTreino[]
   }
 }
 

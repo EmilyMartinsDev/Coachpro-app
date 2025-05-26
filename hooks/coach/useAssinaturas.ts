@@ -3,14 +3,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Assinatura, ComprovanteAssinatura, ListAssinaturasParams } from '@/lib/types';
 import { assinaturaService } from '@/lib/services/coach/assinatura.service';
 
-export function useAssinaturas(coachId: string) {
+export function useAssinaturas() {
   const queryClient = useQueryClient();
 
   // Listar assinaturas
   const listarAssinaturas = (params: ListAssinaturasParams) => {
     return useQuery({
-      queryKey: ['assinaturas', { ...params, coachId }],
-      queryFn: () => assinaturaService.listar({ ...params, coachId }),
+      queryKey: ['assinaturas', { ...params }],
+      queryFn: () => assinaturaService.listar({ ...params }),
       placeholderData: (prev)=>prev
     });
   };

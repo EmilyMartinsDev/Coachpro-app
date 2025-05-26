@@ -60,7 +60,7 @@ export default function FeedbackDetailPage() {
     try {
       await responderFeedback.mutateAsync({
         feedbackId: feedbackId,
-        data: { resposta, respondido: true }
+        data: { respostaCoach:resposta }
       })
       setResposta("")
       toast({ title: "Resposta enviada com sucesso!", variant: "default" })
@@ -107,6 +107,7 @@ export default function FeedbackDetailPage() {
       setPlanoTreinoFile(null)
       setPlanoTreinoTitulo("")
       setPlanoTreinoDescricao("")
+      useDetalhesFeedback(feedbackId)
       toast({ title: "Planos enviados com sucesso!", variant: "default" })
     } catch (err) {
       toast({ title: "Erro ao enviar planos", description: String(err), variant: "destructive" })
@@ -314,7 +315,7 @@ export default function FeedbackDetailPage() {
                     <CardTitle>Resposta do Coach</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="whitespace-pre-line text-gray-800">{feedback.resposta}</p>
+                    <p className="whitespace-pre-line text-gray-800">{feedback.respostaCoach}</p>
                   </CardContent>
                 </Card>
               ) : (
@@ -353,7 +354,7 @@ export default function FeedbackDetailPage() {
                   {feedback.fotos && feedback.fotos.length === 0 ? (
                     <p>Nenhuma foto enviada com este feedback.</p>
                   ) : (
-                    <FeedbackPhotosCarousel photos={feedback.fotos} key={feedback.id}/>
+                    <FeedbackPhotosCarousel photos={feedback.fotos as {id:string, url:string}[]} key={feedback.id}/>
                   )}
                 </CardContent>
               </Card>
