@@ -13,13 +13,4 @@ export const planoService = {
     return response.data;
   },
 
-//   async atualizarPlano(id: string, dados: Partial<Plano>) {
-//     const response = await axios.put(`/api/coach/planos/${id}`, dados);
-//     return response.data;
-//   },
-
-//   async deletarPlano(id: string) {
-//     const response = await axios.delete(`/api/coach/planos/${id}`);
-//     return response.data;
-//   }
 };

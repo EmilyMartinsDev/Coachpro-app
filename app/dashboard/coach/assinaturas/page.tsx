@@ -51,7 +51,7 @@ export default function AssinaturasPage() {
 
   const assinaturas = assinaturasResponse?.data || []
   const totalAssinaturas = assinaturasResponse?.total || 0
-  const totalPages = Math.ceil(totalAssinaturas / filters.pageSize)
+  const totalPages = Math.ceil(totalAssinaturas / filters?.pageSize! ? filters.page! : 1)
 
   const handleFilterChange = (newFilters: Partial<ListAssinaturasParams>) => {
     setFilters(prev => {
@@ -429,7 +429,7 @@ export default function AssinaturasPage() {
                           href="#"
                           onClick={(e) => {
                             e.preventDefault()
-                            if (filters.page > 1) {
+                            if (filters.page && filters.page > 1) {
                               handleFilterChange({ page: filters.page - 1 })
                             }
                           }}
@@ -458,7 +458,7 @@ export default function AssinaturasPage() {
                           href="#"
                           onClick={(e) => {
                             e.preventDefault()
-                            if (filters.page < totalPages) {
+                            if (filters.page && filters.page  < totalPages) {
                               handleFilterChange({ page: filters.page + 1 })
                             }
                           }}

@@ -66,19 +66,11 @@ export default function CoachDashboard() {
   const planosAlimentares = alunos?.flatMap((a: Aluno) => a.planosAlimentar || []) || []
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-10">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Olá, {user.nome.split(" ")[0]}!</h1>
           <p className="text-gray-500">Bem-vindo ao seu dashboard</p>
-        </div>
-        <div className="mt-4 md:mt-0 space-x-2">
-          <Link href="/dashboard/coach/alunos/novo">
-            <Button>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Novo Aluno
-            </Button>
-          </Link>
         </div>
       </div>
 

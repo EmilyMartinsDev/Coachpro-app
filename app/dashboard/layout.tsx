@@ -6,7 +6,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { LayoutDashboard, Users, Dumbbell, MessageSquare, CreditCard, Settings, ListStart, ListChecksIcon, LogOut, CheckCircle2Icon} from "lucide-react"
+import { LayoutDashboard, Users, Dumbbell, MessageSquare, CreditCard, Settings, ListStart, ListChecksIcon, Folder, LogOut, CheckCircle2Icon} from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
 import { CoachProvider } from "@/lib/CoachContext"
 import { AlunoProvider } from "../AlunoContext"
@@ -35,6 +35,7 @@ export default function DashboardLayout({
           { href: "/dashboard/coach/feedbacks", label: "Feedbacks", icon: <MessageSquare className="h-5 w-5" /> },
           { href: "/dashboard/coach/assinaturas", label: "Assinaturas", icon: <CreditCard className="h-5 w-5" /> },
           { href: "/dashboard/coach/anamneses", label: "Anamneses", icon: <ListStart className="h-5 w-5" /> },
+          { href: "/dashboard/coach/planos", label: "Planos", icon: <Folder className="h-5 w-5" /> },
           
         ]
       : [
