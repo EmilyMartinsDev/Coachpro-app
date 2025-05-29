@@ -3,8 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/useAuth"
-import { useFeedbacks } from "@/hooks/useFeedbacks"
-import { useAluno } from "@/hooks/useAluno"
+
 import { format } from "date-fns"
 import {
   Card,
@@ -19,14 +18,14 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useFeedbackAluno } from "@/hooks/aluno/useFeedbackAluno"
 
 type PhotoType = 'frente' | 'costas' | 'ladoDireito' | 'ladoEsquerdo'
 
 export default function EnviarFeedbackPage() {
   const router = useRouter()
   const { user } = useAuth()
-  const { createFeedback } = useFeedbacks()
-  const { aluno, loading: alunoLoading } = useAluno(user?.id)
+  const { createFeedback, data: feedbacks, isLoading } = useFeedbackAluno({})
 
   // Form state
   const [formData, setFormData] = useState({
@@ -122,14 +121,16 @@ export default function EnviarFeedbackPage() {
       if (!user?.id) throw new Error("Usuário não identificado")
       
       // Filter out undefined photos
-      const photosToUpload = Object.fromEntries(
-        Object.entries(photos).filter(([_, file]) => file)
-      ) as Record<PhotoType, File>
-      
+      const photosToUpload = Object.entries(photos)
+        .filter(([_, file]) => file)
+        .map(([_, file]) => file as File)
+         
+        console.log(photosToUpload)
       await createFeedback({
         ...formData,
         alunoId: user.id,
-      }, Object.values(photosToUpload))
+        peso: parseFloat(formData.peso),
+      }, photosToUpload)
       
       router.push("/dashboard/aluno/feedbacks")
     } catch (err) {
@@ -140,40 +141,20 @@ export default function EnviarFeedbackPage() {
     }
   }
 
-  // Verifica se é o dia do feedback (por dia da semana)
-  const diasSemana = [
-    "domingo",
-    "segunda",
-    "terça",
-    "quarta",
-    "quinta",
-    "sexta",
-    "sábado"
-  ]
-  const hojeIdx = new Date().getDay()
-  const hojeNome = diasSemana[hojeIdx]
-
-
-  const isDiaFeedback = hojeNome === aluno?.diaFeedback
-
-  if (alunoLoading) {
-    return (
+  // Verifica se já existe feedback para hoje
+  const hoje = new Date().toISOString().split('T')[0]
+  const feedbackHojeEnviado = feedbacks?.data.some(f => f.aluno?.diaFeedback === hoje)
+  const feedbackJaHojeEnviado = feedbacks?.data.some(f => new Date(f.createdAt )=== new Date(hoje))
+  if (isLoading) {
+    return ( 
       <div className="flex items-center justify-center h-full">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-600"></div>
       </div>
     )
   }
 
-  if (!isDiaFeedback) {
+  if (feedbackHojeEnviado || feedbackJaHojeEnviado) {
     return (
-      <div className="container mx-auto py-12 max-w-xl text-center">
-        <h1 className="text-2xl font-bold mb-4">Envio de Feedback Indisponível</h1>
-        <p className="text-gray-600 mb-2">Você só pode enviar feedback na {aluno?.diaFeedback} feira</p>
-      </div>
-    )
-  }
-  else if(aluno.feedbacks?.find(fed=>fed.diaFeedback === new Date().toISOString().split("T")[0])){
-      return (
       <div className="container mx-auto py-12 max-w-xl text-center">
         <h1 className="text-2xl font-bold mb-4">Seu feedback foi enviado com sucesso!</h1>
         <p className="text-gray-600 mb-2">Aguarde as atualizações do seu coach!</p>
@@ -181,9 +162,8 @@ export default function EnviarFeedbackPage() {
     )
   }
 
-
   return (
-    <div className="container mx-auto py-6 max-w-2xl">
+    <div className="container mx-auto py-10 max-w-2xl px-10">
       <div className="mb-8 text-center">
         <h1 className="text-3xl font-bold text-primary">Enviar Feedback</h1>
         <p className="mt-2 text-gray-500">Preencha o formulário abaixo com seu feedback para o coach.</p>
@@ -206,6 +186,8 @@ export default function EnviarFeedbackPage() {
                 value={formData.peso}
                 onChange={handleChange}
                 placeholder="Ex: 70.5"
+                step="0.1"
+                required
               />
             </div>
             <div className="space-y-2">
@@ -333,6 +315,8 @@ export default function EnviarFeedbackPage() {
                   value={formData.horasSono}
                   onChange={handleChange}
                   placeholder="Quantas horas dormiu"
+                  min="0"
+                  max="24"
                 />
               </div>
               

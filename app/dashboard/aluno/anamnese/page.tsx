@@ -1,29 +1,27 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/useAuth"
-import { useAluno } from "@/hooks/useAluno"
-import AnamneseService from "@/lib/services/anamnese-service"
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Skeleton } from "@/components/ui/skeleton"
 import { format } from "date-fns"
+import { useAnamneseAluno } from "@/hooks/aluno/useAnamneseAluno"
 
 export default function AnamnesePage() {
   const router = useRouter()
   const { user } = useAuth()
-  const { aluno, loading, error } = useAluno(user?.id)
+  const { createAnamnese } = useAnamneseAluno()
+
   const [formData, setFormData] = useState({
-    nomeCompleto: "",
+    nomeCompleto: user?.nome || "",
     instagram: "",
-    email: "",
+    email: user?.email || "",
     cpf: "",
     endereco: "",
     dataNascimento: "",
@@ -41,47 +39,12 @@ export default function AnamnesePage() {
     possuiExames: false,
     qtdRefeicoes: "",
     evolucaoRecente: "",
-    dificuldades: "",
+    dificuldades: ""
   })
+
+  const [photos, setPhotos] = useState<File[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
-  const [localLoading, setLocalLoading] = useState(false)
-  const [validationErrors, setValidationErrors] = useState<{ path: string; message: string }[]>([])
-
-  // Pre-fill form with existing anamnese data if available
-  useEffect(() => {
-    if (aluno?.anamnese) {
-      setFormData({
-        nomeCompleto: aluno.anamnese.nomeCompleto || "",
-        instagram: aluno.anamnese.instagram || "",
-        email: aluno.anamnese.email || "",
-        cpf: aluno.anamnese.cpf || "",
-        endereco: aluno.anamnese.endereco || "",
-        dataNascimento: aluno.anamnese.dataNascimento || "",
-        dataPreenchimento: aluno.anamnese.dataPreenchimento || format(new Date(), "yyyy-MM-dd"),
-        altura: aluno.anamnese.altura || "",
-        peso: aluno.anamnese.peso || "",
-        rotina: aluno.anamnese.rotina || "",
-        objetivos: aluno.anamnese.objetivos || "",
-        tempoTreino: aluno.anamnese.tempoTreino || "",
-        modalidade: aluno.anamnese.modalidade || "",
-        divisaoTreino: aluno.anamnese.divisaoTreino || "",
-        cardio: aluno.anamnese.cardio || "",
-        alimentacaoDiaria: aluno.anamnese.alimentacaoDiaria || "",
-        alimentosPreferidos: aluno.anamnese.alimentosPreferidos || "",
-        possuiExames: aluno.anamnese.possuiExames || false,
-        qtdRefeicoes: aluno.anamnese.qtdRefeicoes || "",
-        evolucaoRecente: aluno.anamnese.evolucaoRecente || "",
-        dificuldades: aluno.anamnese.dificuldades || "",
-      })
-    } else if (user) {
-      setFormData((prev) => ({
-        ...prev,
-        nomeCompleto: user.nome || "",
-        email: user.email || "",
-      }))
-    }
-  }, [aluno, user])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -92,253 +55,135 @@ export default function AnamnesePage() {
     setFormData((prev) => ({ ...prev, possuiExames: checked }))
   }
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setPhotos(Array.from(e.target.files))
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
     setFormError(null)
-    setValidationErrors([])
-    setLocalLoading(true)
     try {
-      if (!user?.id) {
-        throw new Error("Usuário não identificado")
-      }
-      await AnamneseService.createAnamnese({
-        ...formData,
-        alunoId: user.id,
-      })
-      // Refetch aluno data after creating/updating anamnese
-      window.location.reload() // Força reload para garantir atualização do estado global
+      if (!user?.id) throw new Error("Usuário não autenticado")
+
+      await createAnamnese({ ...formData, alunoId: user.id }, photos)
+
+      router.refresh()
+      router.push("/dashboard/aluno")
     } catch (error: any) {
-      if (error?.response?.status === 400 && error.response.data?.errors) {
-        setValidationErrors(error.response.data.errors)
-        setFormError(error.response.data.message || "Dados inválidos")
-      } else {
-        console.error("Error submitting anamnese:", error)
-        setFormError("Erro ao enviar anamnese. Tente novamente.")
-      }
+      console.error("Erro ao enviar anamnese:", error)
+      setFormError("Erro ao enviar anamnese. Tente novamente.")
     } finally {
       setSubmitting(false)
-      setLocalLoading(false)
     }
-  }
-
-  if (loading || localLoading) {
-    return (
-      <div className="container mx-auto py-6">
-        <div className="mb-8">
-          <Skeleton className="h-10 w-1/4" />
-        </div>
-        <Skeleton className="h-[600px] w-full" />
-      </div>
-    )
   }
 
   return (
     <div className="container mx-auto py-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Anamnese</h1>
-        <p className="mt-2 text-gray-500">
-          Preencha o formulário abaixo com suas informações para que possamos conhecer melhor seus objetivos e
-          necessidades.
-        </p>
-      </div>
+      <h1 className="text-3xl font-bold mb-4">Anamnese</h1>
+      <p className="mb-6 text-gray-500">Preencha o formulário com informações importantes para o seu acompanhamento.</p>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
           <CardHeader>
             <CardTitle>Informações Pessoais</CardTitle>
-            <CardDescription>Preencha seus dados pessoais</CardDescription>
+            <CardDescription>Essas informações ajudam na sua identificação e contato.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="nomeCompleto">Nome Completo</Label>
-                <Input
-                  id="nomeCompleto"
-                  name="nomeCompleto"
-                  value={formData.nomeCompleto}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="instagram">Instagram</Label>
-                <Input id="instagram" name="instagram" value={formData.instagram} onChange={handleChange} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" name="email" type="email" value={formData.email} onChange={handleChange} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cpf">CPF</Label>
-                <Input id="cpf" name="cpf" value={formData.cpf} onChange={handleChange} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="endereco">Endereço</Label>
-                <Input id="endereco" name="endereco" value={formData.endereco} onChange={handleChange} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="dataNascimento">Data de Nascimento</Label>
-                <Input
-                  id="dataNascimento"
-                  name="dataNascimento"
-                  type="date"
-                  value={formData.dataNascimento}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-            </div>
+            <FormField id="nomeCompleto" label="Nome Completo" value={formData.nomeCompleto} onChange={handleChange} required />
+            <FormField id="instagram" label="Instagram (com @)" value={formData.instagram} onChange={handleChange} />
+            <FormField id="email" label="Email" value={formData.email} onChange={handleChange} required type="email" />
+            <FormField id="cpf" label="CPF" value={formData.cpf} onChange={handleChange} required />
+            <FormField id="endereco" label="Endereço completo" value={formData.endereco} onChange={handleChange} required />
+            <FormField id="dataNascimento" label="Data de Nascimento" value={formData.dataNascimento} onChange={handleChange} type="date" required />
           </CardContent>
         </Card>
 
-        <Card className="mt-6">
+        <Card>
           <CardHeader>
-            <CardTitle>Informações Físicas e Objetivos</CardTitle>
-            <CardDescription>Conte-nos sobre seus objetivos e condição física</CardDescription>
+            <CardTitle>Informações Físicas e Treino</CardTitle>
+            <CardDescription>Dados sobre seu físico atual e rotina de exercícios.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="altura">Altura (cm)</Label>
-                <Input id="altura" name="altura" value={formData.altura} onChange={handleChange} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="peso">Peso (kg)</Label>
-                <Input id="peso" name="peso" value={formData.peso} onChange={handleChange} />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="objetivos">Quais são seus objetivos?</Label>
-              <Textarea id="objetivos" name="objetivos" value={formData.objetivos} onChange={handleChange} rows={3} />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="rotina">Descreva sua rotina diária</Label>
-              <Textarea id="rotina" name="rotina" value={formData.rotina} onChange={handleChange} rows={3} />
-            </div>
+            <FormField id="altura" label="Altura (em cm)" value={formData.altura} onChange={handleChange} />
+            <FormField id="peso" label="Peso (em kg)" value={formData.peso} onChange={handleChange} />
+            <FormField id="tempoTreino" label="Tempo de treino (anos/meses)" value={formData.tempoTreino} onChange={handleChange} />
+            <FormField id="modalidade" label="Modalidade de treino" value={formData.modalidade} onChange={handleChange} />
+            <FormField id="divisaoTreino" label="Divisão de treino atual" value={formData.divisaoTreino} onChange={handleChange} />
+            <FormField id="cardio" label="Faz cardio? Frequência" value={formData.cardio} onChange={handleChange} />
           </CardContent>
         </Card>
 
-        <Card className="mt-6">
+        <Card>
           <CardHeader>
-            <CardTitle>Informações de Treino</CardTitle>
-            <CardDescription>Conte-nos sobre sua experiência com treinos</CardDescription>
+            <CardTitle>Hábitos Alimentares</CardTitle>
+            <CardDescription>Essencial para adequação nutricional.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="tempoTreino">Há quanto tempo treina?</Label>
-                <Input id="tempoTreino" name="tempoTreino" value={formData.tempoTreino} onChange={handleChange} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="modalidade">Modalidade de treino</Label>
-                <Input id="modalidade" name="modalidade" value={formData.modalidade} onChange={handleChange} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="divisaoTreino">Divisão de treino atual</Label>
-                <Input id="divisaoTreino" name="divisaoTreino" value={formData.divisaoTreino} onChange={handleChange} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cardio">Faz cardio? Qual frequência?</Label>
-                <Input id="cardio" name="cardio" value={formData.cardio} onChange={handleChange} />
-              </div>
-            </div>
+            <TextAreaField id="alimentacaoDiaria" label="Como é sua alimentação diária?" value={formData.alimentacaoDiaria} onChange={handleChange} />
+            <TextAreaField id="alimentosPreferidos" label="Alimentos que você mais gosta" value={formData.alimentosPreferidos} onChange={handleChange} />
+            <FormField id="qtdRefeicoes" label="Quantidade de refeições por dia" value={formData.qtdRefeicoes} onChange={handleChange} />
           </CardContent>
         </Card>
 
-        <Card className="mt-6">
+        <Card>
           <CardHeader>
-            <CardTitle>Informações Alimentares</CardTitle>
-            <CardDescription>Conte-nos sobre sua alimentação</CardDescription>
+            <CardTitle>Objetivos e Dificuldades</CardTitle>
+            <CardDescription>Para entender melhor suas metas e obstáculos.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="alimentacaoDiaria">Como é sua alimentação diária?</Label>
-              <Textarea
-                id="alimentacaoDiaria"
-                name="alimentacaoDiaria"
-                value={formData.alimentacaoDiaria}
-                onChange={handleChange}
-                rows={3}
-              />
-            </div>
+            <TextAreaField id="objetivos" label="Quais são seus principais objetivos?" value={formData.objetivos} onChange={handleChange} />
+            <TextAreaField id="rotina" label="Descreva sua rotina diária" value={formData.rotina} onChange={handleChange} />
+            <TextAreaField id="evolucaoRecente" label="Como tem sido sua evolução recente?" value={formData.evolucaoRecente} onChange={handleChange} />
+            <TextAreaField id="dificuldades" label="Principais dificuldades enfrentadas" value={formData.dificuldades} onChange={handleChange} />
+          </CardContent>
+        </Card>
 
-            <div className="space-y-2">
-              <Label htmlFor="alimentosPreferidos">Quais são seus alimentos preferidos?</Label>
-              <Textarea
-                id="alimentosPreferidos"
-                name="alimentosPreferidos"
-                value={formData.alimentosPreferidos}
-                onChange={handleChange}
-                rows={3}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="qtdRefeicoes">Quantas refeições você faz por dia?</Label>
-              <Input id="qtdRefeicoes" name="qtdRefeicoes" value={formData.qtdRefeicoes} onChange={handleChange} />
-            </div>
-
+        <Card>
+          <CardHeader>
+            <CardTitle>Exames e Fotos</CardTitle>
+            <CardDescription>Informações complementares importantes.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="flex items-center space-x-2">
               <Checkbox id="possuiExames" checked={formData.possuiExames} onCheckedChange={handleCheckboxChange} />
-              <Label htmlFor="possuiExames">Possui exames recentes?</Label>
+              <Label htmlFor="possuiExames">Possui exames médicos recentes?</Label>
+            </div>
+            <div>
+              <Label htmlFor="photos">Fotos de progresso</Label>
+              <Input id="photos" type="file" multiple accept="image/*" onChange={handleFileChange} />
+              <p className="text-xs text-gray-500">Você pode enviar múltiplas fotos.</p>
             </div>
           </CardContent>
-        </Card>
-
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Informações Adicionais</CardTitle>
-            <CardDescription>Outras informações relevantes</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="evolucaoRecente">Como tem sido sua evolução recente?</Label>
-              <Textarea
-                id="evolucaoRecente"
-                name="evolucaoRecente"
-                value={formData.evolucaoRecente}
-                onChange={handleChange}
-                rows={3}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="dificuldades">Quais são suas maiores dificuldades?</Label>
-              <Textarea
-                id="dificuldades"
-                name="dificuldades"
-                value={formData.dificuldades}
-                onChange={handleChange}
-                rows={3}
-              />
-            </div>
-          </CardContent>
-          <CardFooter className="flex justify-between">
-            <Button variant="outline" onClick={() => router.back()}>
-              Cancelar
-            </Button>
+          <CardFooter className="flex justify-end">
             <Button type="submit" disabled={submitting}>
-              {submitting ? "Enviando..." : aluno?.anamnese ? "Atualizar Anamnese" : "Enviar Anamnese"}
+              {submitting ? "Enviando..." : "Enviar Anamnese"}
             </Button>
           </CardFooter>
         </Card>
 
-        {formError && (
-          <div className="mt-4 rounded-md bg-red-50 p-4 text-red-700">
-            <p>{formError}</p>
-            {validationErrors.length > 0 && (
-              <ul className="mt-2 list-disc list-inside text-sm">
-                {validationErrors.map((err, idx) => (
-                  <li key={idx}><strong>{err.path}:</strong> {err.message}</li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
+        {formError && <p className="text-red-600">{formError}</p>}
       </form>
+    </div>
+  )
+}
+
+function FormField({ id, label, value, onChange, type = "text", required = false }: any) {
+  return (
+    <div>
+      <Label htmlFor={id}>{label}</Label>
+      <Input id={id} name={id} type={type} value={value} onChange={onChange} required={required} />
+    </div>
+  )
+}
+
+function TextAreaField({ id, label, value, onChange }: any) {
+  return (
+    <div>
+      <Label htmlFor={id}>{label}</Label>
+      <Textarea id={id} name={id} value={value} onChange={onChange} rows={3} />
     </div>
   )
 }

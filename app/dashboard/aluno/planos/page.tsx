@@ -18,26 +18,6 @@ export default function PlanosPage() {
   const planosTreino = treinosData?.data || [];
   const planosAlimentares = dietasData?.data || [];
 
-  const agruparPlanosPorVersao = (planos: (PlanoTreino | PlanoAlimentar)[]) => {
-    const grupos: Record<string, (PlanoTreino | PlanoAlimentar)[]> = {};
-    planos.forEach((plano) => {
-      if (!grupos[plano.titulo]) {
-        grupos[plano.titulo] = [];
-      }
-      grupos[plano.titulo].push(plano);
-    });
-
-    Object.keys(grupos).forEach((titulo) => {
-      grupos[titulo].sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-    });
-
-    return grupos;
-  };
-
-  const planosTreinoAgrupados = agruparPlanosPorVersao(planosTreino);
-  const planosAlimentaresAgrupados = agruparPlanosPorVersao(planosAlimentares);
 
   const isLoading = loadingTreinos || loadingDietas;
   const error = errorTreinos || errorDietas;
@@ -72,11 +52,11 @@ export default function PlanosPage() {
         </TabsList>
 
         <TabsContent value="treino">
-          <PlanoCard titulo="Planos de Treino" descricao="Seus planos de treino personalizados" planosAgrupados={planosTreinoAgrupados} />
+          <PlanoCard titulo="Planos de Treino" descricao="Seus planos de treino personalizados" planos={planosTreino} />
         </TabsContent>
 
         <TabsContent value="alimentar">
-          <PlanoCard titulo="Planos Alimentares" descricao="Seus planos alimentares personalizados" planosAgrupados={planosAlimentaresAgrupados} />
+          <PlanoCard titulo="Planos Alimentares" descricao="Seus planos alimentares personalizados" planos={planosAlimentares} />
         </TabsContent>
       </Tabs>
     </div>
@@ -86,10 +66,10 @@ export default function PlanosPage() {
 interface PlanoCardProps {
   titulo: string;
   descricao: string;
-  planosAgrupados: Record<string, (PlanoTreino | PlanoAlimentar)[]>;
+  planos: PlanoTreino[] | PlanoAlimentar[];
 }
 
-function PlanoCard({ titulo, descricao, planosAgrupados }: PlanoCardProps) {
+function PlanoCard({ titulo, descricao, planos }: PlanoCardProps) {
   return (
     <Card>
       <CardHeader>
@@ -97,9 +77,9 @@ function PlanoCard({ titulo, descricao, planosAgrupados }: PlanoCardProps) {
         <CardDescription>{descricao}</CardDescription>
       </CardHeader>
       <CardContent>
-        {Object.keys(planosAgrupados).length > 0 ? (
+        {planos.length > 0 ? (
           <div className="space-y-6">
-            {Object.entries(planosAgrupados).map(([titulo, planos]) => (
+           
               <div key={titulo} className="border rounded-lg overflow-hidden">
                 <div className="bg-gray-50 p-4 flex items-center justify-between">
                   <div className="flex items-center">
@@ -157,7 +137,6 @@ function PlanoCard({ titulo, descricao, planosAgrupados }: PlanoCardProps) {
                   </TableBody>
                 </Table>
               </div>
-            ))}
           </div>
         ) : (
           <div className="text-center py-8">

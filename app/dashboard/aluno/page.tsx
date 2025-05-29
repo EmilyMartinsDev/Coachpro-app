@@ -7,28 +7,19 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar, Dumbbell, FileText, MessageSquare, Utensils, ArrowRight, ClipboardCheck } from "lucide-react"
-import { useAuth } from "@/hooks/useAuth"
-import { useTreinoAluno } from "@/hooks/aluno/useTreinoAluno"
-import { useDietaAluno } from "@/hooks/aluno/useDietaAluno"
-import { useFeedbackAluno } from "@/hooks/aluno/useFeedbackAluno"
-import { useAnamneseAluno } from "@/hooks/aluno/useAnamneseAluno"
-import { useAssinaturasAluno } from "@/hooks/aluno/useAssinaturaAluno"
 
+import { format } from "date-fns"
+import { ptBR } from "date-fns/locale"
+import { useAluno } from "@/hooks/aluno/useAlunoProfile"
 
 export default function AlunoDashboard() {
-  const { user } = useAuth()
-
-  const { enviarAnamnese } = useAnamneseAluno()
-
-  const {data: treinos, isLoading: loadingTreinos} = useTreinoAluno()
-  const{data: dietas, isLoading: loadingDietas} = useDietaAluno()
-  const {data: feedbacks} = useFeedbackAluno()
-
+  const { data:aluno, isLoading, error } = useAluno()
   const [proximosFeedbacks, setProximosFeedbacks] = useState<{ data: string; status: string }[]>([])
 
-  // Calcula próximos feedbacks baseado nos feedbacks do aluno
+  // Calcula próximos feedbacks
   useEffect(() => {
-    if (!feedbacks) return
+    if (!aluno) return
+    
     const hoje = new Date()
     const proximos: { data: string; status: string }[] = [
       {
@@ -40,17 +31,17 @@ export default function AlunoDashboard() {
         status: "pendente",
       },
     ]
-    if (feedbacks.data.length > 0) {
-      const ultimoFeedback = feedbacks.data[0]
-      proximos.push({
-        data: ultimoFeedback.createdAt.toString(),
+    
+    if (aluno?.feedbacks?.length > 0) {
+      const ultimoFeedback = aluno?.feedbacks[0]
+      proximos.unshift({
+        data: ultimoFeedback.createdAt,
         status: "concluido",
       })
     }
+    
     setProximosFeedbacks(proximos)
-  }, [feedbacks])
-
-  const isLoading = loadingTreinos || loadingDietas
+  }, [aluno])
 
   if (isLoading) {
     return (
@@ -60,23 +51,24 @@ export default function AlunoDashboard() {
     )
   }
 
-  if (!user) {
+  if (error || !aluno) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p>Erro ao carregar dados do usuário.</p>
+        <p>Erro ao carregar dados do aluno.</p>
       </div>
     )
   }
 
-  const isNovoAluno = (!treinos || treinos.data.length === 0) && (!dietas || dietas.data.length === 0)
+  const isNovoAluno = aluno.planosTreino?.length === 0 && 
+                     aluno?.planosAlimentares?.length === 0 &&
+                     aluno?.anamneses?.length === 0
 
-  // Se for um novo aluno, mostrar o card de boas-vindas e o link para o formulário de anamnese
   if (isNovoAluno) {
     return (
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Olá, {user.nome.split(" ")[0]}!</h1>
+            <h1 className="text-2xl font-bold">Olá, {aluno.nome.split(" ")[0]}!</h1>
             <p className="text-gray-500">Bem-vindo(a) ao CoachPro</p>
           </div>
         </div>
@@ -119,12 +111,11 @@ export default function AlunoDashboard() {
     )
   }
 
-  // Se não for aluno novo, mostrar o dashboard normal
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Olá, {user.nome.split(" ")[0]}!</h1>
+          <h1 className="text-2xl font-bold">Olá, {aluno.nome.split(" ")[0]}!</h1>
           <p className="text-gray-500">Bem-vindo ao seu dashboard</p>
         </div>
         <div className="mt-4 md:mt-0">
@@ -144,7 +135,7 @@ export default function AlunoDashboard() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold">{treinos?.data.length || 0}</div>
+              <div className="text-2xl font-bold">{aluno.planosTreino?.length}</div>
               <Dumbbell className="h-8 w-8 text-emerald-600" />
             </div>
           </CardContent>
@@ -156,7 +147,7 @@ export default function AlunoDashboard() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold">{dietas?.data.length || 0}</div>
+              <div className="text-2xl font-bold">{aluno.planosAlimentares?.length}</div>
               <Utensils className="h-8 w-8 text-emerald-600" />
             </div>
           </CardContent>
@@ -170,7 +161,7 @@ export default function AlunoDashboard() {
             <div className="flex items-center justify-between">
               <div className="text-2xl font-bold">
                 {proximosFeedbacks.length > 0
-                  ? new Date(proximosFeedbacks[0].data).toLocaleDateString("pt-BR")
+                  ? format(new Date(proximosFeedbacks[0].data), "dd/MM/yyyy", { locale: ptBR })
                   : "Nenhum"}
               </div>
               <Calendar className="h-8 w-8 text-emerald-600" />
@@ -192,16 +183,16 @@ export default function AlunoDashboard() {
             </TabsList>
 
             <TabsContent value="treino">
-              {treinos && treinos.data.length > 0 ? (
+              {aluno.planosTreino?.length > 0 ? (
                 <div className="space-y-4">
-                  {treinos.data.map((plano) => (
+                  {aluno.planosTreino.map((plano) => (
                     <div key={plano.id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="flex items-center">
                         <FileText className="h-5 w-5 text-emerald-600 mr-3" />
                         <div>
                           <h3 className="font-medium">{plano.titulo}</h3>
                           <p className="text-sm text-gray-500">
-                            Criado em {new Date(plano.createdAt).toLocaleDateString("pt-BR")}
+                            Criado em {format(new Date(plano.createdAt), "PPP", { locale: ptBR })}
                           </p>
                         </div>
                       </div>
@@ -219,16 +210,16 @@ export default function AlunoDashboard() {
             </TabsContent>
 
             <TabsContent value="alimentar">
-              {dietas && dietas.data.length > 0 ? (
+              {aluno.planosAlimentares?.length > 0 ? (
                 <div className="space-y-4">
-                  {dietas.data.map((plano) => (
+                  {aluno.planosAlimentares.map((plano) => (
                     <div key={plano.id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="flex items-center">
                         <FileText className="h-5 w-5 text-emerald-600 mr-3" />
                         <div>
                           <h3 className="font-medium">{plano.titulo}</h3>
                           <p className="text-sm text-gray-500">
-                            Criado em {new Date(plano.createdAt).toLocaleDateString("pt-BR")}
+                            Criado em {format(new Date(plano.createdAt), "PPP", { locale: ptBR })}
                           </p>
                         </div>
                       </div>
@@ -245,6 +236,60 @@ export default function AlunoDashboard() {
               )}
             </TabsContent>
           </Tabs>
+        </CardContent>
+      </Card>
+
+      {/* Seção de Feedbacks Recentes */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Seus Feedbacks Recentes</CardTitle>
+          <CardDescription>Histórico de comunicações com seu coach</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {aluno.feedbacks.length > 0 ? (
+            <div className="space-y-4">
+              {aluno.feedbacks.slice(0, 3).map((feedback) => (
+                <div key={feedback.id} className="p-4 border rounded-lg">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-medium">
+                        Feedback de {format(new Date(feedback.createdAt), "PPP", { locale: ptBR })}
+                      </h3>
+                      {feedback.resposta && (
+                        <p className="text-sm text-gray-500 mt-1">
+                          Respondido em {format(new Date(feedback.updatedAt), "PPPp", { locale: ptBR })}
+                        </p>
+                      )}
+                    </div>
+                    <Link href={`/dashboard/aluno/feedbacks/${feedback.id}`}>
+                      <Button variant="ghost" size="sm">
+                        Ver detalhes
+                        <ArrowRight className="h-4 w-4 ml-2" />
+                      </Button>
+                    </Link>
+                  </div>
+                  {feedback.respostaCoach && (
+                    <div className="mt-2 p-3 bg-gray-50 rounded-md">
+                      <p className="text-sm text-gray-700 line-clamp-2">
+                        {feedback.respostaCoach}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
+              {aluno.feedbacks.length > 3 && (
+                <div className="text-center mt-4">
+                  <Link href="/dashboard/aluno/feedbacks">
+                    <Button variant="outline">
+                      Ver todos os feedbacks
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-gray-500">Nenhum feedback enviado ainda.</p>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -145,11 +145,11 @@ export default function AssinaturaDetalhesPage() {
     )
   }
 
-  const diasRestantes = calcularDiasRestantes(assinatura.dataFim)
-  const progresso = calcularProgresso(assinatura.dataInicio, assinatura.dataFim)
+  const diasRestantes = calcularDiasRestantes(assinatura.dataFim as string)
+  const progresso = calcularProgresso(assinatura.dataInicio as string, assinatura.dataFim as string)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-10">
       <div className="flex items-center justify-between">
         <div className="flex items-center">
           <Button
@@ -199,12 +199,12 @@ export default function AssinaturaDetalhesPage() {
 
             <div className="flex items-center justify-between">
               <span className="text-gray-500">Data de Início:</span>
-              <span className="font-medium">{new Date(assinatura.dataInicio).toLocaleDateString("pt-BR")}</span>
+              <span className="font-medium">{new Date(assinatura.dataInicio as string).toLocaleDateString("pt-BR")}</span>
             </div>
 
             <div className="flex items-center justify-between">
               <span className="text-gray-500">Data de Término:</span>
-              <span className="font-medium">{new Date(assinatura.dataFim).toLocaleDateString("pt-BR")}</span>
+              <span className="font-medium">{new Date(assinatura.dataFim as string).toLocaleDateString("pt-BR")}</span>
             </div>
 
             <div className="flex items-center justify-between">

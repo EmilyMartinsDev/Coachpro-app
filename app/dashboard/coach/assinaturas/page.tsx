@@ -18,7 +18,7 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import { usePlanos } from "@/hooks/coach/usePlanos"
 import { useAlunos } from "@/hooks/coach/useAlunos"
 import { useAssinaturas } from "@/hooks/coach/useAssinaturas"
-import { Parcelamento } from "@/lib/types"
+import { Parcelamento, ListAssinaturasParams } from "@/lib/types"
 
 export default function AssinaturasPage() {
   const { user } = useAuth()
@@ -39,23 +39,34 @@ export default function AssinaturasPage() {
   const [selectedPlanoId, setSelectedPlanoId] = useState("")
   const [parcelamentos, setParcelamentos] = useState<Parcelamento[]>([])
 
-  const [searchTerm, setSearchTerm] = useState("")
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 10
-
-  const { data: assinaturasResponse, isLoading: assinaturasLoading, error: assinaturaError } = listarAssinaturas({
-    page: currentPage,
-    pageSize: itemsPerPage,
-    search: searchTerm
+  const [filters, setFilters] = useState<ListAssinaturasParams>({
+    page: 1,
+    pageSize: 10,
+    status: undefined,
+    alunoId: undefined,
+    search: undefined
   })
+
+  const { data: assinaturasResponse, isLoading: assinaturasLoading, error: assinaturaError } = listarAssinaturas(filters)
 
   const assinaturas = assinaturasResponse?.data || []
   const totalAssinaturas = assinaturasResponse?.total || 0
-  const totalPages = Math.ceil(totalAssinaturas / itemsPerPage)
+  const totalPages = Math.ceil(totalAssinaturas / filters.pageSize)
 
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [searchTerm])
+  const handleFilterChange = (newFilters: Partial<ListAssinaturasParams>) => {
+    setFilters(prev => {
+      const updatedFilters = { ...prev, ...newFilters, page: 1 }
+      
+      if (updatedFilters.status === "all") {
+        updatedFilters.status = undefined
+      }
+      if (updatedFilters.alunoId === "all") {
+        updatedFilters.alunoId = undefined
+      }
+      
+      return updatedFilters
+    })
+  }
 
   const handleSubmit = async () => {
     if (!selectedAlunoId || !selectedParcelamentoId) {
@@ -184,7 +195,7 @@ export default function AssinaturasPage() {
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <label htmlFor="aluno">Aluno</label>
-                <Select value={selectedAlunoId} onValueChange={(e)=>setSelectedAlunoId(e)} disabled={alunosLoading}>
+                <Select value={selectedAlunoId} onValueChange={setSelectedAlunoId} disabled={alunosLoading}>
                   <SelectTrigger id="aluno">
                     <SelectValue placeholder="Selecione um aluno" />
                   </SelectTrigger>
@@ -203,10 +214,10 @@ export default function AssinaturasPage() {
                 <Select
                   value={selectedPlanoId}
                   onValueChange={(planoId) => {
-                    setSelectedPlanoId(planoId);
-                    const planoSelecionado = planos?.find(p => p.id === planoId);
-                    setParcelamentos(planoSelecionado?.parcelamento ?? []);
-                    setSelectedParcelamentoId("");
+                    setSelectedPlanoId(planoId)
+                    const planoSelecionado = planos?.find(p => p.id === planoId)
+                    setParcelamentos(planoSelecionado?.parcelamento ?? [])
+                    setSelectedParcelamentoId("")
                   }}
                   disabled={planosLoading}
                 >
@@ -263,11 +274,45 @@ export default function AssinaturasPage() {
           <CardDescription>Gerencie as assinaturas dos seus alunos</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-4">
+          <div className="flex gap-4 mb-4">
+            <Select
+              value={filters.status ?? "all"}
+              onValueChange={(value) => handleFilterChange({ status: value })}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filtrar por status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="ATIVA">Ativas</SelectItem>
+                <SelectItem value="PENDENTE">Pendentes</SelectItem>
+                <SelectItem value="PENDENTE_APROVACAO">Pendentes de Aprovação</SelectItem>
+                <SelectItem value="CANCELADA">Canceladas</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={filters.alunoId ?? "all"}
+              onValueChange={(value) => handleFilterChange({ alunoId: value })}
+              disabled={alunosLoading}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filtrar por aluno" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {alunos.map((aluno) => (
+                  <SelectItem key={aluno.id} value={aluno.id}>
+                    {aluno.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             <Input
               placeholder="Buscar assinaturas..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              value={filters.search ?? ""}
+              onChange={(e) => handleFilterChange({ search: e.target.value })}
               className="max-w-sm"
             />
           </div>
@@ -315,53 +360,52 @@ export default function AssinaturasPage() {
                             </Badge>
                           </TableCell>
                           <TableCell>{assinatura.parcela}/{assinatura.parcelamento.quantidadeParcela}</TableCell>
-                        {
-                          !assinatura.comprovante_url ? (
+                          {
+                            !assinatura.comprovante_url ? (
                               <TableCell>
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="file"
-                                id={`file-upload-${assinatura.id}`}
-                                className="hidden"
-                                onChange={(e) => handleFileChange(e, assinatura.id)}
-                                accept="image/*,.pdf"
-                              />
-                              <label
-                                htmlFor={`file-upload-${assinatura.id}`}
-                                className="cursor-pointer text-sm text-blue-600 hover:text-blue-800 flex items-center"
-                              >
-                                <Upload className="h-4 w-4 mr-1" />
-                                Selecionar
-                              </label>
-                              {selectedFile && currentAssinaturaId === assinatura.id && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={handleUpload}
-                                  disabled={isUploading}
-                                  className="text-sm"
-                                >
-                                  {isUploading ? "Enviando..." : "Enviar"}
-                                </Button>
-                              )}
-                            </div>
-                          </TableCell>
-                          ): 
-                            (
-                              <TableCell>
-                              <a
-                                href={assinatura.comprovante_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                aria-label="Ver comprovante"
-                                className="text-blue-500 hover:underline flex items-center"
-                              >
-                                <FileText className="h-4 w-4 mr-1" /> Ver
-                              </a>
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="file"
+                                    id={`file-upload-${assinatura.id}`}
+                                    className="hidden"
+                                    onChange={(e) => handleFileChange(e, assinatura.id)}
+                                    accept="image/*,.pdf"
+                                  />
+                                  <label
+                                    htmlFor={`file-upload-${assinatura.id}`}
+                                    className="cursor-pointer text-sm text-blue-600 hover:text-blue-800 flex items-center"
+                                  >
+                                    <Upload className="h-4 w-4 mr-1" />
+                                    Selecionar
+                                  </label>
+                                  {selectedFile && currentAssinaturaId === assinatura.id && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={handleUpload}
+                                      disabled={isUploading}
+                                      className="text-sm"
+                                    >
+                                      {isUploading ? "Enviando..." : "Enviar"}
+                                    </Button>
+                                  )}
+                                </div>
                               </TableCell>
-                            )
-                          
-                        }
+                            ) : 
+                              (
+                                <TableCell>
+                                  <a
+                                    href={assinatura.comprovante_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    aria-label="Ver comprovante"
+                                    className="text-blue-500 hover:underline flex items-center"
+                                  >
+                                    <FileText className="h-4 w-4 mr-1" /> Ver
+                                  </a>
+                                </TableCell>
+                              )
+                          }
                           <TableCell>
                             <Link href={`/dashboard/coach/assinaturas/${assinatura.id}`}>
                               <Button variant="outline" size="sm">
@@ -385,11 +429,12 @@ export default function AssinaturasPage() {
                           href="#"
                           onClick={(e) => {
                             e.preventDefault()
-                            if (currentPage > 1) setCurrentPage(currentPage - 1)
+                            if (filters.page > 1) {
+                              handleFilterChange({ page: filters.page - 1 })
+                            }
                           }}
-                          aria-disabled={currentPage === 1}
-                          tabIndex={currentPage === 1 ? -1 : 0}
-                          className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                          aria-disabled={filters.page === 1}
+                          className={filters.page === 1 ? "pointer-events-none opacity-50" : ""}
                         />
                       </PaginationItem>
 
@@ -399,9 +444,9 @@ export default function AssinaturasPage() {
                             href="#"
                             onClick={(e) => {
                               e.preventDefault()
-                              setCurrentPage(i + 1)
+                              handleFilterChange({ page: i + 1 })
                             }}
-                            isActive={currentPage === i + 1}
+                            isActive={filters.page === i + 1}
                           >
                             {i + 1}
                           </PaginationLink>
@@ -413,11 +458,12 @@ export default function AssinaturasPage() {
                           href="#"
                           onClick={(e) => {
                             e.preventDefault()
-                            if (currentPage < totalPages) setCurrentPage(currentPage + 1)
+                            if (filters.page < totalPages) {
+                              handleFilterChange({ page: filters.page + 1 })
+                            }
                           }}
-                          aria-disabled={currentPage === totalPages}
-                          tabIndex={currentPage === totalPages ? -1 : 0}
-                          className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+                          aria-disabled={filters.page === totalPages}
+                          className={filters.page === totalPages ? "pointer-events-none opacity-50" : ""}
                         />
                       </PaginationItem>
                     </PaginationContent>

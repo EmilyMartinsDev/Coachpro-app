@@ -14,7 +14,7 @@ export const assinaturaService = {
   alunoEnviarComprovante:async (data: {file:File, assinaturaId:string}): Promise<Assinatura> => {
     const formData = new FormData();
     formData.append('file', data.file);
-    const response = await api.post<Assinatura>(`/api/aluno/assinaturas/${data.assinaturaId}/comprovante`,
+    const response = await api.patch<Assinatura>(`/api/aluno/assinaturas/${data.assinaturaId}/comprovante`,
         formData,
       {
         headers: {

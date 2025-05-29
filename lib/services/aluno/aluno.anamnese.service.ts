@@ -7,4 +7,17 @@ export const anamneseService = {
     const response = await api.post<Anamnese>("/api/aluno/anamneses", data);
     return response.data;
   },
+    enviarFotoAnamnese: async (data: {file:File, anamneseId:string}): Promise<Anamnese> => {
+    const formData = new FormData();
+    formData.append('file', data.file);
+    const response = await api.post<Anamnese>("/api/aluno/anamneses/"+data.anamneseId,   
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    return response.data;
+  },
 }

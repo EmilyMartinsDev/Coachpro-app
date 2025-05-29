@@ -2,11 +2,18 @@
 import { assinaturaService } from "@/lib/services/aluno/aluno.assinatura.service"
 import { useQuery, useMutation } from "@tanstack/react-query"
 
+export interface AlunoListAssinaturasParams {
+  page?: number;
+  pageSize?: number;
+  status?: "PENDENTE" | "PENDENTE_APROVACAO" | "CANCELADA" | "ATIVA";
+  alunoId?: string;
+}
 
-export function useAssinaturasAluno() {
+
+export function useAssinaturasAluno(params:AlunoListAssinaturasParams = {}) {
   const {data, error, isLoading} =  useQuery({
-      queryKey: ['aluno', 'assinaturas'],
-      queryFn: () => assinaturaService.listar(),
+      queryKey: ['aluno', 'assinaturas', params],
+      queryFn: () => assinaturaService.listar(params),
     })
 
   const detalhesAssinatura = (assinaturaId: string) => {

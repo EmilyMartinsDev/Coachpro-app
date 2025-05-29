@@ -182,6 +182,7 @@ export interface Feedback {
   aluno:{
     id:string
     nome:string
+    diaFeedback:string
     planosAlimentar:PlanoAlimentar[]
     planosTreino:PlanoTreino[]
   }

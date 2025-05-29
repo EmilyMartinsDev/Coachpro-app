@@ -6,7 +6,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { LayoutDashboard, Users, Dumbbell, MessageSquare, CreditCard, Settings, LogOut, Menu, X } from "lucide-react"
+import { LayoutDashboard, Users, Dumbbell, MessageSquare, CreditCard, Settings, ListStart, ListChecksIcon, LogOut, CheckCircle2Icon} from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
 import { CoachProvider } from "@/lib/CoachContext"
 import { AlunoProvider } from "../AlunoContext"
@@ -34,13 +34,16 @@ export default function DashboardLayout({
           { href: "/dashboard/coach/alunos", label: "Alunos", icon: <Users className="h-5 w-5" /> },
           { href: "/dashboard/coach/feedbacks", label: "Feedbacks", icon: <MessageSquare className="h-5 w-5" /> },
           { href: "/dashboard/coach/assinaturas", label: "Assinaturas", icon: <CreditCard className="h-5 w-5" /> },
+          { href: "/dashboard/coach/anamneses", label: "Anamneses", icon: <ListStart className="h-5 w-5" /> },
           
         ]
       : [
           { href: "/dashboard/aluno", label: "Dashboard", icon: <LayoutDashboard className="h-5 w-5" /> },
           { href: "/dashboard/aluno/planos", label: "Meus Planos", icon: <Dumbbell className="h-5 w-5" /> },
-          { href: "/dashboard/aluno/assinaturas", label: "Assinaturas", icon: <CreditCard className="h-5 w-5" /> },
+          { href: "/dashboard/aluno/assinaturas", label: "Assinaturas", icon: <CreditCard className="h-5 w-5" /> },        
           { href: "/dashboard/aluno/feedback", label: "Enviar Feedback", icon: <MessageSquare className="h-5 w-5" /> },
+          { href: "/dashboard/aluno/feedbacks", label: "Histórico de Feedbacks", icon: <ListChecksIcon className="h-5 w-5" /> },
+            { href: "/dashboard/aluno/progresso", label: "Meu progresso", icon: <CheckCircle2Icon className="h-5 w-5" /> },
         ]
 
   if (!user) {
