@@ -1,9 +1,16 @@
+
 // User types
 export interface User {
   id: string
   nome: string
   email: string
-  tipo: "coach" | "aluno"
+  role: "COACH" | "ALUNO"
+}
+export interface Paginacao<T> {
+  total: number;
+  page: number;
+  pageSize: number;
+  data: T[];
 }
 
 export interface Coach extends User {
@@ -11,8 +18,8 @@ export interface Coach extends User {
   dataNascimento: string
   foto?: string | null
   createdAt?: string
-  alunos?: Aluno[] // Novo: coach traz alunos aninhados
-  planos?:Plano[]
+  alunos?: Aluno[]
+  planos?: Plano[]
 }
 
 export interface CoachDetailResponse {
@@ -37,6 +44,15 @@ export interface Aluno {
   diaFeedback?: string
 }
 
+export type CreateAlunoRequest = {
+    nome:string
+  email:string
+  senha:string,
+  telefone:string
+  dataNascimento:string
+  diaFeedback:string
+}
+
 export interface CoachSummary {
   id: string
   nome: string
@@ -52,61 +68,84 @@ export interface AlunosResponse {
   sucess: boolean
   data: Aluno[]
 }
+
 export interface AlunoResponse {
   sucess: boolean
   data: Aluno
 }
 
-// Plan types
+// Plano types
 export interface Plano {
   id: string
   titulo: string
   descricao?: string
-  valor: number
-  duracao: number
   coachId: string
   createdAt: string
   updatedAt: string
+  parcelamento?: Parcelamento[]
 }
 
 export interface CreatePlanoRequest {
   titulo: string
   descricao?: string
-  valor: number
-  duracao: number
+  parcelamentos:{
+    valorParcela: number;
+    quantidadeParcela: number;
+  }[]
 }
 
-// Subscription types
-export interface Assinatura {
+// Parcelamento types
+export interface Parcelamento {
   id: string
-  alunoId: string
   planoId: string
-  dataInicio: string
-  dataFim: string
-  valor: number
-  status: "PENDENTE_APROVACAO" | "PENDENTE" | "ATIVA" | "INATIVA" | "CANCELADA"
-  parcela: number
-  totalParcelas: number
-  comprovante_url?: string
-  createdAt: string
-  updatedAt: string
-  aluno?: Aluno
+  valorParcela: number
+  quantidadeParcela: number
   plano?: Plano
+  assinaturas?: Assinatura[]
 }
+
+
+
+export interface Assinatura {
+  id: string;
+  alunoId: string;
+  parcelamentoId: string;
+  status: 'PENDENTE' | 'PENDENTE_APROVACAO' | 'ATIVA' | 'CANCELADA';
+  comprovante_url?: string | null;
+  dataInicio?: string; // Pode ser Date se estiver convertendo
+  dataFim?: string;
+  parcela: number;
+  createdAt: string;
+  updatedAt: string;
+  parcelamento: Parcelamento;
+  aluno:Aluno
+
+}
+
+export interface ComprovanteAssinatura {
+  url: string;
+  assinaturaId: string;
+}
+
+export interface ListAssinaturasParams {
+  coachId?: string;
+  alunoId?: string;
+  status?: string;
+  page?: number;
+  pageSize?: number;
+  search?: string;
+}
+
 
 export interface CreateAssinaturaRequest {
   alunoId: string
-  planoId: string
-  dataInicio: string
-  dataFim: string
-  valor: number
-  status: "PENDENTE_APROVACAO" | "PENDENTE" | "ATIVA"  | "CANCELADA"
+  parcelamentoId: string
+  dataInicio?: string
+  dataFim?: string
+  status: "PENDENTE_APROVACAO" | "PENDENTE" | "ATIVA" | "CANCELADA"
   parcela: number
-  total_parcelas: number
   comprovante_url?: string
 }
-
-
 
 export interface CreatePagamentoRequest {
   assinaturaId: string
@@ -116,61 +155,62 @@ export interface CreatePagamentoRequest {
   comprovante?: string
 }
 
-// Feedback types
 export interface Feedback {
-  id: string
-  alunoId: string
-  peso?: string
-  diaFeedback: string
-  seguiuPlano: "TOTALMENTE" | "PARCIALMENTE" | "NAO"
-  comeuAMais?: string
-  refeicoesPerdidas?: string
-  refeicaoLivre?: string
-  digestaoIntestino?: string
-  dificuldadeAlimentos?: string
-  periodoMenstrual: boolean
-  horasSono?: string
-  qualidadeSono: "OTIMA" | "BOA" | "REGULAR" | "RUIM" | "PESSIMA"
-  acordouCansado: boolean
-  manteveProtocolo: "TOTALMENTE" | "PARCIALMENTE" | "NAO"
-  efeitosColaterais?: string
-  observacoes?: string
-  createdAt: string
-  updatedAt: string
-  aluno?: Aluno
-  resposta?: string
-  respondido?: boolean
-  fotos?: FotoFeedback[]
-}
-
-export interface CreateFeedbackRequest {
-  alunoId: string
-  peso?: string
-  diaFeedback: string
-  seguiuPlano: "TOTALMENTE" | "PARCIALMENTE" | "NAO"
-  comeuAMais?: string
-  refeicoesPerdidas?: string
-  refeicaoLivre?: string
-  digestaoIntestino?: string
-  dificuldadeAlimentos?: string
-  periodoMenstrual: boolean
-  horasSono?: string
-  qualidadeSono: "OTIMA" | "BOA" | "REGULAR" | "RUIM" | "PESSIMA"
-  acordouCansado: boolean
-  manteveProtocolo: "TOTALMENTE" | "PARCIALMENTE" | "NAO"
-  efeitosColaterais?: string
-  observacoes?: string
+  id: string;
+  alunoId: string;
+  coachId: string;
+  peso?: string;
+  diaFeedback: string;
+  seguiuPlano: 'TOTALMENTE' | 'PARCIALMENTE' | 'NAO';
+  comeuAMais?: string;
+  refeicoesPerdidas?: string;
+  refeicaoLivre?: string;
+  digestaoIntestino?: string;
+  dificuldadeAlimentos?: string;
+  periodoMenstrual: boolean;
+  horasSono?: string;
+  qualidadeSono: 'OTIMA' | 'BOA' | 'REGULAR' | 'RUIM' | 'PESSIMA';
+  acordouCansado: boolean;
+  manteveProtocolo: 'TOTALMENTE' | 'PARCIALMENTE' | 'NAO';
+  efeitosColaterais?: string;
+  observacoes?: string;
+  respondido: boolean;
+  respostaCoach?: string;
+  fotos?: FotoFeedback[];
+  createdAt: Date;
+  updatedAt: Date;
+  aluno:{
+    id:string
+    nome:string
+    diaFeedback:string
+    planosAlimentar:PlanoAlimentar[]
+    planosTreino:PlanoTreino[]
+  }
 }
 
 export interface FotoFeedback {
-  id: string
-  feedbackId: string
-  url: string
-  createdAt: string
-  updatedAt: string
+  id: string;
+  feedbackId: string;
+  url: string;
+  createdAt: Date;
 }
 
-// Anamnesis types
+export interface ListarFeedbacksParams {
+  alunoId?: string;
+  respondido?: boolean;
+  page?: number;
+  pageSize?: number;
+  dataInicio?: string;
+  dataFim?: string;
+  search?:string
+}
+
+
+export interface ResponderFeedbackDTO {
+  respostaCoach: string;
+}
+
+// Anamnese types
 export interface Anamnese {
   id: string
   alunoId: string
@@ -225,14 +265,14 @@ export interface CreateAnamneseRequest {
   dificuldades?: string
 }
 
-// Training plan types
+// PlanoTreino types
 export interface PlanoTreino {
   id: string
   alunoId: string
   coachId: string
   titulo: string
   descricao?: string
-  arquivo_url: string
+  arquivo_url?: string | null
   createdAt: string
   updatedAt: string
   aluno?: Aluno
@@ -247,14 +287,14 @@ export interface CreatePlanoTreinoRequest {
   arquivo: any
 }
 
-// Meal plan types
+// PlanoAlimentar types
 export interface PlanoAlimentar {
   id: string
   alunoId: string
   coachId: string
   titulo: string
   descricao?: string
-  arquivo_url?: string
+  arquivo_url?: string | null
   createdAt: string
   updatedAt: string
   aluno?: Aluno

@@ -1,7 +1,5 @@
 "use client"
 
-import type React from "react"
-
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
@@ -16,49 +14,38 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
   ArrowLeft,
-  CreditCard,
-  Calendar,
   CheckCircle,
   AlertCircle,
   Clock,
-  Download,
-  Upload,
-  FileText,
   Ban,
   HourglassIcon,
 } from "lucide-react"
-import { useAuth } from "@/hooks/useAuth"
-import { useAluno } from "@/hooks/useAluno"
-import { usePlanos } from "@/hooks/usePlanos"
-import { useAssinaturas } from "@/hooks/useAssinaturas"
-import type { Assinatura, Plano } from "@/lib/types"
-import { useAlunoContext } from "@/app/AlunoContext"
+import { useAssinaturasAluno } from "@/hooks/aluno/useAssinaturaAluno"
 
 export default function AssinaturaDetalhesPage() {
   const params = useParams()
   const router = useRouter()
   const assinaturaId = params.id as string
 
-  const { user } = useAuth()
-  const { updateAssinatura, getAssinaturaById, assinatura , loading} = useAssinaturas(user?.id)
+  const { 
+    data: assinaturasResponse, 
+    isLoading, 
+    detalhesAssinatura,
+    enviarComprovante 
+  } = useAssinaturasAluno()
+
   const [dialogOpen, setDialogOpen] = useState(false)
   const [comprovante, setComprovante] = useState<File | null>(null)
-  const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
 
-
-
-  useEffect(()=>{
-    getAssinaturaById(assinaturaId)
-  },[assinaturaId])
-
+  // Busca os detalhes da assinatura específica
+  const { data: assinatura } = detalhesAssinatura(assinaturaId)
 
   // Badge de status
   const getStatusBadge = (status: string) => {
@@ -73,12 +60,6 @@ export default function AssinaturaDetalhesPage() {
         return (
           <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
             <Clock className="h-3 w-3 mr-1" /> Pendente
-          </Badge>
-        )
-      case "INATIVA":
-        return (
-          <Badge className="bg-red-100 text-red-800 hover:bg-red-100">
-            <Ban className="h-3 w-3 mr-1" /> Inativa
           </Badge>
         )
       case "PENDENTE_APROVACAO":
@@ -125,31 +106,26 @@ export default function AssinaturaDetalhesPage() {
   const handleEnviarComprovante = async () => {
     setError("")
     setSuccess("")
-    setEnviando(true)
     try {
       if (!assinatura || !comprovante) {
         setError("Assinatura ou comprovante não encontrado.")
-        setEnviando(false)
         return
       }
-      // Monta o FormData para upload real do arquivo
-      const formData = new FormData()
-      formData.append("comprovante_url", comprovante)
-      formData.append("status", "PENDENTE_APROVACAO")
-      formData.append("assinaturaId", assinatura.id)
-      await updateAssinatura(assinatura.id, formData)
+
+      await enviarComprovante.mutateAsync({
+        assinaturaId: assinatura.id,
+        file: comprovante
+      })
+
       setSuccess("Comprovante enviado! Aguarde aprovação do coach.")
       setDialogOpen(false)
       setComprovante(null)
     } catch (err) {
       setError("Erro ao enviar comprovante. Tente novamente.")
-    } finally {
-      setEnviando(false)
     }
   }
 
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-600"></div>
@@ -157,7 +133,7 @@ export default function AssinaturaDetalhesPage() {
     )
   }
 
-  if (!assinatura ) {
+  if (!assinatura) {
     return (
       <div className="flex flex-col items-center justify-center h-full">
         <p className="text-lg text-gray-500 mb-4">Assinatura não encontrada.</p>
@@ -169,11 +145,11 @@ export default function AssinaturaDetalhesPage() {
     )
   }
 
-  const diasRestantes = calcularDiasRestantes(assinatura.dataFim)
-  const progresso = calcularProgresso(assinatura.dataInicio, assinatura.dataFim)
+  const diasRestantes = calcularDiasRestantes(assinatura.dataFim as string)
+  const progresso = calcularProgresso(assinatura.dataInicio as string, assinatura.dataFim as string)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-10">
       <div className="flex items-center justify-between">
         <div className="flex items-center">
           <Button
@@ -186,7 +162,7 @@ export default function AssinaturaDetalhesPage() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold">Detalhes da Assinatura</h1>
-            <p className="text-gray-500">{assinatura?.plano?.titulo}</p>
+            <p className="text-gray-500">{assinatura.parcelamento?.plano?.titulo || "Plano"}</p>
           </div>
         </div>
         <div>{getStatusBadge(assinatura.status)}</div>
@@ -201,7 +177,7 @@ export default function AssinaturaDetalhesPage() {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-gray-500">Plano:</span>
-              <span className="font-medium">{assinatura?.plano?.titulo}</span>
+              <span className="font-medium">{assinatura.parcelamento?.plano?.titulo || "Plano"}</span>
             </div>
 
             <div className="flex items-center justify-between">
@@ -210,18 +186,25 @@ export default function AssinaturaDetalhesPage() {
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="text-gray-500">Valor Total:</span>
-              <span className="font-medium">R$ {assinatura.valor.toFixed(2)}</span>
+              <span className="text-gray-500">Valor da Parcela:</span>
+              <span className="font-medium">R$ {assinatura.parcelamento?.valorParcela?.toFixed(2) || "0.00"}</span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-gray-500">Parcela:</span>
+              <span className="font-medium">
+                {assinatura.parcela}/{assinatura.parcelamento?.quantidadeParcela}
+              </span>
             </div>
 
             <div className="flex items-center justify-between">
               <span className="text-gray-500">Data de Início:</span>
-              <span className="font-medium">{new Date(assinatura.dataInicio).toLocaleDateString("pt-BR")}</span>
+              <span className="font-medium">{new Date(assinatura.dataInicio as string).toLocaleDateString("pt-BR")}</span>
             </div>
 
             <div className="flex items-center justify-between">
               <span className="text-gray-500">Data de Término:</span>
-              <span className="font-medium">{new Date(assinatura.dataFim).toLocaleDateString("pt-BR")}</span>
+              <span className="font-medium">{new Date(assinatura.dataFim as string).toLocaleDateString("pt-BR")}</span>
             </div>
 
             <div className="flex items-center justify-between">
@@ -254,8 +237,6 @@ export default function AssinaturaDetalhesPage() {
                   </span>
                 </div>
 
-            
-
                 {diasRestantes <= 0 && (
                   <div className="bg-red-50 p-3 rounded-md flex items-start">
                     <AlertCircle className="h-5 w-5 text-red-500 mr-2 mt-0.5" />
@@ -284,38 +265,18 @@ export default function AssinaturaDetalhesPage() {
                 <Button className="w-full mt-2" onClick={() => setDialogOpen(true)}>
                   Enviar comprovante de pagamento
                 </Button>
-                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Enviar Comprovante</DialogTitle>
-                      <DialogDescription>Selecione o arquivo do comprovante para upload.</DialogDescription>
-                    </DialogHeader>
-                    {error && <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">{error}</div>}
-                    {success && <div className="bg-green-50 text-green-600 p-3 rounded-md text-sm">{success}</div>}
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="comprovante">Comprovante de Pagamento</Label>
-                        <Input id="comprovante" type="file" accept="image/*,.pdf" onChange={handleFileChange} />
-                        <p className="text-xs text-gray-500">Formatos aceitos: imagens e PDF.</p>
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                        Cancelar
-                      </Button>
-                      <Button onClick={handleEnviarComprovante} disabled={!comprovante || enviando}>
-                        {enviando ? "Enviando..." : "Enviar Comprovante"}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
               </>
             )}
 
             {assinatura.status === "PENDENTE_APROVACAO" && (
-              <div className="bg-yellow-50 p-3 rounded-md text-sm text-yellow-800 flex items-start">
-                <HourglassIcon className="h-4 w-4 mr-2 mt-0.5" />
-                <p>Aguardando aprovação pelo coach.</p>
+              <div className="bg-yellow-50 p-3 rounded-md flex items-start">
+                <HourglassIcon className="h-5 w-5 text-yellow-500 mr-2 mt-0.5" />
+                <div>
+                  <p className="text-yellow-800 font-medium">Aguardando aprovação</p>
+                  <p className="text-yellow-700 text-sm">
+                    Seu comprovante está sendo analisado pelo coach.
+                  </p>
+                </div>
               </div>
             )}
 
@@ -333,6 +294,48 @@ export default function AssinaturaDetalhesPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Dialog para envio de comprovante */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enviar Comprovante</DialogTitle>
+            <DialogDescription>
+              Faça upload do comprovante de pagamento para esta assinatura.
+            </DialogDescription>
+          </DialogHeader>
+          {error && <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">{error}</div>}
+          {success && <div className="bg-green-50 text-green-600 p-3 rounded-md text-sm">{success}</div>}
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="comprovante">Comprovante de Pagamento</Label>
+              <Input 
+                id="comprovante" 
+                type="file" 
+                accept="image/*,.pdf" 
+                onChange={handleFileChange}
+                disabled={enviarComprovante.isPending}
+              />
+              <p className="text-xs text-gray-500">Formatos aceitos: JPG, PNG ou PDF (máx. 10MB)</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setDialogOpen(false)}
+              disabled={enviarComprovante.isPending}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleEnviarComprovante} 
+              disabled={!comprovante || enviarComprovante.isPending}
+            >
+              {enviarComprovante.isPending ? "Enviando..." : "Enviar Comprovante"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

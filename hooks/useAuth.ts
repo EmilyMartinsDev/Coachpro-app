@@ -34,7 +34,7 @@ export function useAuth() {
       setUser(response.data.user)
 
       // Redirect based on user type
-      if (response?.data?.user?.tipo === "coach") {
+      if (response?.data?.user?.role === "COACH") {
         router.push("/dashboard/coach")
       } else {
         router.push("/dashboard/aluno")

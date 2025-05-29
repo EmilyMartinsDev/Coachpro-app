@@ -17,11 +17,11 @@ export default function LoginPage() {
   const { login, isLoading, error } = useAuth()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [userType, setUserType] = useState<"coach" | "aluno">("coach")
+  const [userType, setUserType] = useState<"COACH" | "ALUNO">("COACH")
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    await login({ email, senha: password, tipo: userType })
+    await login({ email, senha: password, role: userType })
   }
 
   return (
@@ -32,10 +32,10 @@ export default function LoginPage() {
           <CardDescription>Entre com suas credenciais para acessar o sistema</CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="coach" onValueChange={(value) => setUserType(value as "coach" | "aluno")}>
+          <Tabs defaultValue="COACH" onValueChange={(value) => setUserType(value as "COACH" | "ALUNO")}>
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="coach">Coach</TabsTrigger>
-              <TabsTrigger value="aluno">Aluno</TabsTrigger>
+              <TabsTrigger value="COACH">Coach</TabsTrigger>
+              <TabsTrigger value="ALUNO">Aluno</TabsTrigger>
             </TabsList>
             <form onSubmit={handleSubmit} className="mt-4 space-y-4">
               <div className="space-y-2">
