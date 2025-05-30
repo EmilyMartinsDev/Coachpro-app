@@ -60,8 +60,8 @@ export default function AlunoDashboard() {
   }
 
   const isNovoAluno = aluno.planosTreino?.length === 0 && 
-                     aluno?.planosAlimentares?.length === 0 &&
-                     aluno?.anamneses?.length === 0
+                     aluno?.planosAlimentar?.length === 0 &&
+                     !aluno?.anamnese
 
   if (isNovoAluno) {
     return (
@@ -147,7 +147,7 @@ export default function AlunoDashboard() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold">{aluno.planosAlimentares?.length}</div>
+              <div className="text-2xl font-bold">{aluno.planosAlimentar?.length}</div>
               <Utensils className="h-8 w-8 text-emerald-600" />
             </div>
           </CardContent>
@@ -183,9 +183,9 @@ export default function AlunoDashboard() {
             </TabsList>
 
             <TabsContent value="treino">
-              {aluno.planosTreino?.length > 0 ? (
+              {aluno?.planosTreino?.length > 0 ? (
                 <div className="space-y-4">
-                  {aluno.planosTreino.map((plano) => (
+                  {aluno?.planosTreino.map((plano) => (
                     <div key={plano.id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="flex items-center">
                         <FileText className="h-5 w-5 text-emerald-600 mr-3" />
@@ -210,9 +210,9 @@ export default function AlunoDashboard() {
             </TabsContent>
 
             <TabsContent value="alimentar">
-              {aluno.planosAlimentares?.length > 0 ? (
+              {aluno?.planosAlimentar?.length > 0 ? (
                 <div className="space-y-4">
-                  {aluno.planosAlimentares.map((plano) => (
+                  {aluno.planosAlimentar?.map((plano) => (
                     <div key={plano.id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="flex items-center">
                         <FileText className="h-5 w-5 text-emerald-600 mr-3" />
@@ -255,7 +255,7 @@ export default function AlunoDashboard() {
                       <h3 className="font-medium">
                         Feedback de {format(new Date(feedback.createdAt), "PPP", { locale: ptBR })}
                       </h3>
-                      {feedback.resposta && (
+                      {feedback.respostaCoach && (
                         <p className="text-sm text-gray-500 mt-1">
                           Respondido em {format(new Date(feedback.updatedAt), "PPPp", { locale: ptBR })}
                         </p>
